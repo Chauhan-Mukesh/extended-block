@@ -1,6 +1,5 @@
 {
     "name": "chauhan-mukesh/extended-block-bundle",
-    "version": "1.0.0",
     "description": "Pimcore bundle that extends block data type with separate table storage for better performance and queryability",
     "keywords": [
         "pimcore",
