@@ -2,8 +2,8 @@
 
 [![Latest Version](https://img.shields.io/packagist/v/chauhan-mukesh/extended-block-bundle.svg)](https://packagist.org/packages/chauhan-mukesh/extended-block-bundle)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![PHP Version](https://img.shields.io/badge/php-%3E%3D8.1-8892BF.svg)](https://php.net/)
-[![Pimcore Version](https://img.shields.io/badge/pimcore-%3E%3D11.0-00ADD8.svg)](https://pimcore.com/)
+[![PHP Version](https://img.shields.io/badge/php-%3E%3D8.0-8892BF.svg)](https://php.net/)
+[![Pimcore Version](https://img.shields.io/badge/pimcore-%3E%3D10.0-00ADD8.svg)](https://pimcore.com/)
 
 A Pimcore bundle that extends the block data type by storing data in separate database tables instead of serialized JSON in a single column. This provides better performance, queryability, and proper relational data modeling.
 
@@ -18,6 +18,7 @@ A Pimcore bundle that extends the block data type by storing data in separate da
 - [Architecture](#-architecture)
 - [Database Schema](#-database-schema)
 - [Localized Fields](#-localized-fields)
+- [Block Nesting Rules](#-block-nesting-rules)
 - [API Reference](#-api-reference)
 - [Testing](#-testing)
 - [Contributing](#-contributing)
@@ -30,7 +31,8 @@ A Pimcore bundle that extends the block data type by storing data in separate da
 - **Better Performance**: Eliminates serialization overhead and enables efficient database queries
 - **Full Queryability**: Block data can be queried directly using SQL
 - **Localized Field Support**: Full support for localized fields within block items
-- **Recursion Prevention**: Automatic validation prevents ExtendedBlock with LocalizedFields inside LocalizedFields
+- **Nesting Prevention**: Automatic validation prevents invalid block nesting configurations
+- **Safe Schema Updates**: New fields can be added without data loss; removed fields preserve existing data
 - **Lazy Loading**: Optional lazy loading for improved performance with large datasets
 - **Complete Admin UI**: Full Pimcore admin integration with drag-and-drop ordering
 - **Multiple Block Types**: Define multiple block types with different field configurations
@@ -38,9 +40,9 @@ A Pimcore bundle that extends the block data type by storing data in separate da
 
 ## 📦 Requirements
 
-- PHP 8.1 or higher
-- Pimcore 11.0 or higher
-- Symfony 6.0 or higher
+- PHP 8.0 or higher
+- Pimcore 10.0 or higher (supports Pimcore 10.x and 11.x)
+- Symfony 5.4 or higher (5.x for Pimcore 10, 6.x for Pimcore 11)
 
 ## 🚀 Installation
 
@@ -407,22 +409,113 @@ $enData = $item->getLocalizedValuesForLanguage('en');
 $allLocalized = $item->getLocalizedData();
 ```
 
-### Nesting Prevention
+## 🚫 Placement and Nesting Rules
 
-To prevent infinite recursion, ExtendedBlock with LocalizedFields cannot be placed inside a LocalizedFields container:
+ExtendedBlock can **only** be placed at the root level of a class definition. To ensure data integrity and prevent performance issues, the following configurations are **not allowed**:
+
+### Where ExtendedBlock CAN be Used
+
+| Location | Allowed |
+|----------|---------|
+| Root level of Class Definition | ✅ Yes |
+| Inside Tabpanel (layout) | ✅ Yes |
+| Inside Panel (layout) | ✅ Yes |
+| Inside Fieldcontainer (layout) | ✅ Yes |
+| Inside any layout container at root level | ✅ Yes |
+
+> **Note:** Layout containers (Tabpanel, Panel, Fieldcontainer, etc.) are transparent wrappers in Pimcore class definitions. ExtendedBlock can be placed inside any layout container as long as it's at the root level of the class definition.
+
+### Where ExtendedBlock CANNOT be Used
+
+| Location | Reason |
+|----------|--------|
+| Inside LocalizedFields | Complex table relationships would break |
+| Inside FieldCollections | FieldCollections have their own storage mechanism |
+| Inside ObjectBricks | ObjectBricks have their own storage mechanism |
+| Inside Block | Block uses serialized JSON storage |
+| Inside another ExtendedBlock | Would cause infinite recursion |
+
+### What ExtendedBlock CANNOT Contain
+
+| Field Type | Reason |
+|------------|--------|
+| ExtendedBlock | Would cause infinite recursion and complex data relationships |
+| Block | Standard Block uses different storage mechanism |
+| Fieldcollections | Complex container types cannot be nested |
+| Objectbricks | Complex container types cannot be nested |
+
+### Examples
 
 ```
-❌ Invalid:
+❌ Invalid: ExtendedBlock inside LocalizedFields
 LocalizedFields
-└── ExtendedBlock (with LocalizedFields inside)
-    └── LocalizedFields  # Would cause recursion!
+└── contentBlocks (ExtendedBlock)  # Not allowed!
 
-✅ Valid:
-ExtendedBlock
-└── LocalizedFields
-    └── title
-    └── description
+❌ Invalid: ExtendedBlock inside FieldCollection
+myFieldCollection (Fieldcollections)
+└── contentBlocks (ExtendedBlock)  # Not allowed!
+
+❌ Invalid: ExtendedBlock inside ObjectBrick
+myObjectBrick (Objectbricks)
+└── contentBlocks (ExtendedBlock)  # Not allowed!
+
+❌ Invalid: ExtendedBlock inside Block
+mainBlock (Block)
+└── contentBlocks (ExtendedBlock)  # Not allowed!
+
+❌ Invalid: FieldCollections inside ExtendedBlock
+contentBlocks (ExtendedBlock)
+└── text_block
+    └── myCollection (Fieldcollections)  # Not allowed!
+
+❌ Invalid: ObjectBricks inside ExtendedBlock
+contentBlocks (ExtendedBlock)
+└── text_block
+    └── myBricks (Objectbricks)  # Not allowed!
+
+❌ Invalid: ExtendedBlock nesting
+contentBlocks (ExtendedBlock)
+└── text_block
+    └── nestedBlocks (ExtendedBlock)  # Not allowed!
+
+❌ Invalid: Block inside ExtendedBlock
+contentBlocks (ExtendedBlock)
+└── text_block
+    └── innerBlock (Block)  # Not allowed!
+
+✅ Valid: ExtendedBlock at root level with simple fields
+Class: Product
+├── name (Input)
+├── contentBlocks (ExtendedBlock)  # At root level ✓
+│   ├── text_block
+│   │   ├── title (Input)
+│   │   ├── content (WYSIWYG)
+│   │   └── LocalizedFields
+│   │       ├── headline (Input)
+│   │       └── teaser (Textarea)
+│   └── image_block
+│       ├── image (Image)
+│       └── caption (Input)
+└── price (Numeric)
+
+✅ Valid: ExtendedBlock inside layout containers
+Class: Product
+└── Tabpanel (layout)
+    ├── Panel "General" (layout)
+    │   ├── name (Input)
+    │   └── price (Numeric)
+    └── Panel "Content" (layout)
+        └── Fieldcontainer (layout)
+            └── contentBlocks (ExtendedBlock)  # Inside layouts at root level ✓
+                ├── text_block
+                │   └── title (Input)
+                └── image_block
+                    └── image (Image)
 ```
+
+### Validation
+
+The bundle automatically validates your class definition when saving and will throw an exception if any invalid placement or nesting is detected. This validation occurs both in the admin UI and via the PHP API.
 
 ## 📚 API Reference
 

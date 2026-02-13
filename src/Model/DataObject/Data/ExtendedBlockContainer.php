@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle - Extended Block Container
+ * Extended Block Bundle - Extended Block Container.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
@@ -13,8 +12,8 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\Model\DataObject\Data;
 
-use Pimcore\Model\DataObject\Concrete;
 use ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock;
+use Pimcore\Model\DataObject\Concrete;
 
 /**
  * Container class for Extended Block items.
@@ -47,22 +46,16 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
 {
     /**
      * The parent object that owns this container.
-     *
-     * @var Concrete|null
      */
     protected ?Concrete $object = null;
 
     /**
      * The field name of the extended block in the parent object.
-     *
-     * @var string
      */
     protected string $fieldname = '';
 
     /**
      * The extended block definition.
-     *
-     * @var ExtendedBlock|null
      */
     protected ?ExtendedBlock $definition = null;
 
@@ -75,22 +68,16 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
 
     /**
      * Whether lazy loading is enabled.
-     *
-     * @var bool
      */
     protected bool $lazyLoad = false;
 
     /**
      * Whether data has been loaded (for lazy loading).
-     *
-     * @var bool
      */
     protected bool $loaded = false;
 
     /**
      * Current iterator position.
-     *
-     * @var int
      */
     protected int $position = 0;
 
@@ -106,7 +93,7 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
         ?Concrete $object = null,
         string $fieldname = '',
         ?ExtendedBlock $definition = null,
-        bool $lazyLoad = false
+        bool $lazyLoad = false,
     ) {
         $this->object = $object;
         $this->fieldname = $fieldname;
@@ -120,8 +107,6 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
      *
      * If lazy loading is enabled and data hasn't been loaded yet,
      * this method triggers the data loading from the database.
-     *
-     * @return void
      */
     protected function ensureLoaded(): void
     {
@@ -145,6 +130,7 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
     public function getItems(): array
     {
         $this->ensureLoaded();
+
         return $this->items;
     }
 
@@ -152,14 +138,13 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
      * Sets all items in the container.
      *
      * @param array<int, ExtendedBlockItem> $items The items to set
-     *
-     * @return static
      */
     public function setItems(array $items): static
     {
         $this->items = $items;
         $this->loaded = true;
         $this->reindex();
+
         return $this;
     }
 
@@ -167,8 +152,6 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
      * Adds an item to the container.
      *
      * @param ExtendedBlockItem $item The item to add
-     *
-     * @return static
      */
     public function addItem(ExtendedBlockItem $item): static
     {
@@ -177,6 +160,7 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
         $item->setObject($this->object);
         $item->setFieldname($this->fieldname);
         $this->items[] = $item;
+
         return $this;
     }
 
@@ -184,8 +168,6 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
      * Removes an item at the specified index.
      *
      * @param int $index The index of the item to remove
-     *
-     * @return static
      */
     public function removeItem(int $index): static
     {
@@ -209,6 +191,7 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
     public function getItem(int $index): ?ExtendedBlockItem
     {
         $this->ensureLoaded();
+
         return $this->items[$index] ?? null;
     }
 
@@ -217,8 +200,6 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
      *
      * @param int $fromIndex The current position
      * @param int $toIndex   The target position
-     *
-     * @return static
      */
     public function moveItem(int $fromIndex, int $toIndex): static
     {
@@ -244,8 +225,6 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
 
     /**
      * Re-indexes all items to ensure sequential indices.
-     *
-     * @return void
      */
     protected function reindex(): void
     {
@@ -266,18 +245,17 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
     {
         $this->ensureLoaded();
 
-        return array_filter($this->items, fn($item) => $item->getType() === $type);
+        return array_filter($this->items, fn ($item) => $item->getType() === $type);
     }
 
     /**
      * Clears all items from the container.
-     *
-     * @return static
      */
     public function clear(): static
     {
         $this->items = [];
         $this->loaded = true;
+
         return $this;
     }
 
@@ -289,6 +267,7 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
     public function isEmpty(): bool
     {
         $this->ensureLoaded();
+
         return empty($this->items);
     }
 
@@ -300,6 +279,7 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
     public function first(): ?ExtendedBlockItem
     {
         $this->ensureLoaded();
+
         return $this->items[0] ?? null;
     }
 
@@ -312,87 +292,66 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
     {
         $this->ensureLoaded();
         $count = count($this->items);
+
         return $count > 0 ? $this->items[$count - 1] : null;
     }
 
     // Iterator interface implementation
 
-    /**
-     * {@inheritdoc}
-     */
     public function current(): mixed
     {
         $this->ensureLoaded();
+
         return $this->items[$this->position] ?? null;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function key(): int
     {
         return $this->position;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function next(): void
     {
         ++$this->position;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function rewind(): void
     {
         $this->position = 0;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function valid(): bool
     {
         $this->ensureLoaded();
+
         return isset($this->items[$this->position]);
     }
 
     // Countable interface implementation
 
-    /**
-     * {@inheritdoc}
-     */
     public function count(): int
     {
         $this->ensureLoaded();
+
         return count($this->items);
     }
 
     // ArrayAccess interface implementation
 
-    /**
-     * {@inheritdoc}
-     */
     public function offsetExists(mixed $offset): bool
     {
         $this->ensureLoaded();
+
         return isset($this->items[$offset]);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function offsetGet(mixed $offset): mixed
     {
         $this->ensureLoaded();
+
         return $this->items[$offset] ?? null;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function offsetSet(mixed $offset, mixed $value): void
     {
         $this->ensureLoaded();
@@ -401,7 +360,7 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
             throw new \InvalidArgumentException('Value must be an instance of ExtendedBlockItem');
         }
 
-        if ($offset === null) {
+        if (null === $offset) {
             $this->addItem($value);
         } else {
             $value->setIndex($offset);
@@ -411,9 +370,6 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function offsetUnset(mixed $offset): void
     {
         $this->removeItem($offset);
@@ -421,71 +377,47 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
 
     // Getters and Setters
 
-    /**
-     * @return Concrete|null
-     */
     public function getObject(): ?Concrete
     {
         return $this->object;
     }
 
-    /**
-     * @param Concrete|null $object
-     * @return static
-     */
     public function setObject(?Concrete $object): static
     {
         $this->object = $object;
+
         return $this;
     }
 
-    /**
-     * @return string
-     */
     public function getFieldname(): string
     {
         return $this->fieldname;
     }
 
-    /**
-     * @param string $fieldname
-     * @return static
-     */
     public function setFieldname(string $fieldname): static
     {
         $this->fieldname = $fieldname;
+
         return $this;
     }
 
-    /**
-     * @return ExtendedBlock|null
-     */
     public function getDefinition(): ?ExtendedBlock
     {
         return $this->definition;
     }
 
-    /**
-     * @param ExtendedBlock|null $definition
-     * @return static
-     */
     public function setDefinition(?ExtendedBlock $definition): static
     {
         $this->definition = $definition;
+
         return $this;
     }
 
-    /**
-     * @return bool
-     */
     public function isLazyLoad(): bool
     {
         return $this->lazyLoad;
     }
 
-    /**
-     * @return bool
-     */
     public function isLoaded(): bool
     {
         return $this->loaded;
@@ -500,6 +432,6 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
     {
         $this->ensureLoaded();
 
-        return array_map(fn($item) => $item->toArray(), $this->items);
+        return array_map(fn ($item) => $item->toArray(), $this->items);
     }
 }

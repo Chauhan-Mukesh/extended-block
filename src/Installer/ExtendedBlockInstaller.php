@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle - Installer
+ * Extended Block Bundle - Installer.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
@@ -13,11 +12,10 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\Installer;
 
-use Pimcore\Extension\Bundle\Installer\InstallerInterface;
-use Pimcore\Extension\Bundle\Installer\OutputWriterInterface;
-use Pimcore\Extension\Bundle\Installer\OutputWriter;
 use Doctrine\DBAL\Connection;
-use Symfony\Component\HttpKernel\Bundle\BundleInterface;
+use Pimcore\Extension\Bundle\Installer\InstallerInterface;
+use Pimcore\Extension\Bundle\Installer\OutputWriter;
+use Pimcore\Extension\Bundle\Installer\OutputWriterInterface;
 
 /**
  * Installer for Extended Block Bundle.
@@ -34,22 +32,16 @@ class ExtendedBlockInstaller implements InstallerInterface
 {
     /**
      * Database connection.
-     *
-     * @var Connection
      */
     protected Connection $db;
 
     /**
      * Output writer for installation messages.
-     *
-     * @var OutputWriterInterface
      */
     protected OutputWriterInterface $outputWriter;
 
     /**
      * Path to the bundle.
-     *
-     * @var string
      */
     protected string $bundlePath;
 
@@ -79,8 +71,6 @@ class ExtendedBlockInstaller implements InstallerInterface
      * Sets the output writer for installation messages.
      *
      * @param OutputWriterInterface $outputWriter The output writer
-     *
-     * @return void
      */
     public function setOutputWriter(OutputWriterInterface $outputWriter): void
     {
@@ -94,8 +84,6 @@ class ExtendedBlockInstaller implements InstallerInterface
      * - Creates the metadata table to track installation status
      * - Publishes bundle assets
      * - Performs any initial setup tasks
-     *
-     * @return void
      */
     public function install(): void
     {
@@ -107,20 +95,20 @@ class ExtendedBlockInstaller implements InstallerInterface
 
             // Record installation
             $this->db->executeStatement(
-                "INSERT INTO `" . self::METADATA_TABLE . "` (key_name, value) VALUES (?, ?) 
-                 ON DUPLICATE KEY UPDATE value = VALUES(value)",
+                'INSERT INTO `'.self::METADATA_TABLE.'` (key_name, value) VALUES (?, ?) 
+                 ON DUPLICATE KEY UPDATE value = VALUES(value)',
                 ['version', self::VERSION]
             );
 
             $this->db->executeStatement(
-                "INSERT INTO `" . self::METADATA_TABLE . "` (key_name, value) VALUES (?, ?) 
-                 ON DUPLICATE KEY UPDATE value = VALUES(value)",
+                'INSERT INTO `'.self::METADATA_TABLE.'` (key_name, value) VALUES (?, ?) 
+                 ON DUPLICATE KEY UPDATE value = VALUES(value)',
                 ['installed_at', date('Y-m-d H:i:s')]
             );
 
             $this->outputWriter->write('Extended Block Bundle installed successfully!');
         } catch (\Exception $e) {
-            $this->outputWriter->write('Error installing bundle: ' . $e->getMessage());
+            $this->outputWriter->write('Error installing bundle: '.$e->getMessage());
             throw $e;
         }
     }
@@ -131,8 +119,6 @@ class ExtendedBlockInstaller implements InstallerInterface
      * Called when updating to a new version:
      * - Runs any necessary migrations
      * - Updates bundle metadata
-     *
-     * @return void
      */
     public function update(): void
     {
@@ -147,19 +133,19 @@ class ExtendedBlockInstaller implements InstallerInterface
 
             // Update version in metadata
             $this->db->executeStatement(
-                "UPDATE `" . self::METADATA_TABLE . "` SET value = ? WHERE key_name = ?",
+                'UPDATE `'.self::METADATA_TABLE.'` SET value = ? WHERE key_name = ?',
                 [self::VERSION, 'version']
             );
 
             $this->db->executeStatement(
-                "INSERT INTO `" . self::METADATA_TABLE . "` (key_name, value) VALUES (?, ?) 
-                 ON DUPLICATE KEY UPDATE value = VALUES(value)",
+                'INSERT INTO `'.self::METADATA_TABLE.'` (key_name, value) VALUES (?, ?) 
+                 ON DUPLICATE KEY UPDATE value = VALUES(value)',
                 ['updated_at', date('Y-m-d H:i:s')]
             );
 
             $this->outputWriter->write('Extended Block Bundle updated successfully!');
         } catch (\Exception $e) {
-            $this->outputWriter->write('Error updating bundle: ' . $e->getMessage());
+            $this->outputWriter->write('Error updating bundle: '.$e->getMessage());
             throw $e;
         }
     }
@@ -174,8 +160,6 @@ class ExtendedBlockInstaller implements InstallerInterface
      *
      * Data tables are preserved to prevent accidental data loss.
      * Use the console command to manually remove data tables if needed.
-     *
-     * @return void
      */
     public function uninstall(): void
     {
@@ -184,11 +168,11 @@ class ExtendedBlockInstaller implements InstallerInterface
 
         try {
             // Remove metadata table
-            $this->db->executeStatement("DROP TABLE IF EXISTS `" . self::METADATA_TABLE . "`");
+            $this->db->executeStatement('DROP TABLE IF EXISTS `'.self::METADATA_TABLE.'`');
 
             $this->outputWriter->write('Extended Block Bundle uninstalled successfully!');
         } catch (\Exception $e) {
-            $this->outputWriter->write('Error uninstalling bundle: ' . $e->getMessage());
+            $this->outputWriter->write('Error uninstalling bundle: '.$e->getMessage());
             throw $e;
         }
     }
@@ -203,8 +187,8 @@ class ExtendedBlockInstaller implements InstallerInterface
         try {
             // Check if metadata table exists
             $tableExists = $this->db->fetchOne(
-                "SELECT COUNT(*) FROM information_schema.tables 
-                 WHERE table_schema = DATABASE() AND table_name = ?",
+                'SELECT COUNT(*) FROM information_schema.tables 
+                 WHERE table_schema = DATABASE() AND table_name = ?',
                 [self::METADATA_TABLE]
             );
 
@@ -214,7 +198,7 @@ class ExtendedBlockInstaller implements InstallerInterface
 
             // Check for version entry
             $version = $this->db->fetchOne(
-                "SELECT value FROM `" . self::METADATA_TABLE . "` WHERE key_name = ?",
+                'SELECT value FROM `'.self::METADATA_TABLE.'` WHERE key_name = ?',
                 ['version']
             );
 
@@ -236,6 +220,7 @@ class ExtendedBlockInstaller implements InstallerInterface
         }
 
         $installedVersion = $this->getInstalledVersion();
+
         return version_compare($installedVersion, self::VERSION, '<');
     }
 
@@ -278,7 +263,7 @@ class ExtendedBlockInstaller implements InstallerInterface
     {
         try {
             $version = $this->db->fetchOne(
-                "SELECT value FROM `" . self::METADATA_TABLE . "` WHERE key_name = ?",
+                'SELECT value FROM `'.self::METADATA_TABLE.'` WHERE key_name = ?',
                 ['version']
             );
 
@@ -290,12 +275,10 @@ class ExtendedBlockInstaller implements InstallerInterface
 
     /**
      * Creates the metadata table for tracking installation status.
-     *
-     * @return void
      */
     protected function createMetadataTable(): void
     {
-        $sql = "CREATE TABLE IF NOT EXISTS `" . self::METADATA_TABLE . "` (
+        $sql = 'CREATE TABLE IF NOT EXISTS `'.self::METADATA_TABLE.'` (
             `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
             `key_name` VARCHAR(100) NOT NULL,
             `value` TEXT,
@@ -303,7 +286,7 @@ class ExtendedBlockInstaller implements InstallerInterface
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
             UNIQUE KEY `key_name` (`key_name`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4';
 
         $this->db->executeStatement($sql);
     }
@@ -313,16 +296,14 @@ class ExtendedBlockInstaller implements InstallerInterface
      *
      * @param string $fromVersion The current version
      * @param string $toVersion   The target version
-     *
-     * @return void
      */
     protected function runMigrations(string $fromVersion, string $toVersion): void
     {
         $migrations = $this->getMigrations();
 
         foreach ($migrations as $migrationVersion => $migration) {
-            if (version_compare($migrationVersion, $fromVersion, '>') &&
-                version_compare($migrationVersion, $toVersion, '<=')) {
+            if (version_compare($migrationVersion, $fromVersion, '>')
+                && version_compare($migrationVersion, $toVersion, '<=')) {
                 $this->outputWriter->write("Running migration for version {$migrationVersion}...");
                 $migration();
             }

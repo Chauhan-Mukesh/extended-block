@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle - Table Schema Service
+ * Extended Block Bundle - Table Schema Service.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
@@ -14,12 +13,12 @@ declare(strict_types=1);
 namespace ExtendedBlockBundle\Service;
 
 use Doctrine\DBAL\Connection;
+use ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock;
 use Pimcore\Db;
 use Pimcore\Logger;
 use Pimcore\Model\DataObject\ClassDefinition;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Localizedfields;
-use ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock;
 
 /**
  * Service for managing Extended Block database tables.
@@ -34,21 +33,17 @@ use ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock;
  * - Main table: object_eb_{classId}_{fieldName}
  * - Localized table: object_eb_{classId}_{fieldName}_localized
  *
- * @see \ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock
+ * @see ExtendedBlock
  */
 class TableSchemaService
 {
     /**
      * Database connection.
-     *
-     * @var Connection
      */
     protected Connection $db;
 
     /**
      * Table prefix from configuration.
-     *
-     * @var string
      */
     protected string $tablePrefix;
 
@@ -69,10 +64,8 @@ class TableSchemaService
      * This method is called when a class definition is saved and ensures
      * the database tables match the field definition.
      *
-     * @param ClassDefinition $class         The class definition
+     * @param ClassDefinition $class           The class definition
      * @param ExtendedBlock   $fieldDefinition The extended block field
-     *
-     * @return void
      */
     public function createOrUpdateTable(ClassDefinition $class, ExtendedBlock $fieldDefinition): void
     {
@@ -86,7 +79,7 @@ class TableSchemaService
 
         // Handle localized table if needed
         if ($fieldDefinition->isAllowLocalizedFields() && $fieldDefinition->hasLocalizedFields()) {
-            $localizedTableName = $tableName . '_localized';
+            $localizedTableName = $tableName.'_localized';
 
             if ($this->tableExists($localizedTableName)) {
                 $this->updateLocalizedTable($class, $fieldDefinition, $localizedTableName);
@@ -99,23 +92,21 @@ class TableSchemaService
     /**
      * Creates a new main table for an extended block field.
      *
-     * @param ClassDefinition $class         The class definition
+     * @param ClassDefinition $class           The class definition
      * @param ExtendedBlock   $fieldDefinition The field definition
-     * @param string          $tableName     The table name
-     *
-     * @return void
+     * @param string          $tableName       The table name
      */
     protected function createTable(ClassDefinition $class, ExtendedBlock $fieldDefinition, string $tableName): void
     {
         $columns = $this->buildMainTableColumns($fieldDefinition);
 
-        $sql = "CREATE TABLE `{$tableName}` (\n" . implode(",\n", $columns) . "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $sql = "CREATE TABLE `{$tableName}` (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         try {
             $this->db->executeStatement($sql);
             Logger::info("ExtendedBlock: Created table {$tableName}");
         } catch (\Exception $e) {
-            Logger::error("ExtendedBlock: Failed to create table {$tableName}: " . $e->getMessage());
+            Logger::error("ExtendedBlock: Failed to create table {$tableName}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -123,11 +114,9 @@ class TableSchemaService
     /**
      * Updates an existing table to match the field definition.
      *
-     * @param ClassDefinition $class         The class definition
+     * @param ClassDefinition $class           The class definition
      * @param ExtendedBlock   $fieldDefinition The field definition
-     * @param string          $tableName     The table name
-     *
-     * @return void
+     * @param string          $tableName       The table name
      */
     protected function updateTable(ClassDefinition $class, ExtendedBlock $fieldDefinition, string $tableName): void
     {
@@ -142,7 +131,7 @@ class TableSchemaService
                     $this->db->executeStatement($sql);
                     Logger::info("ExtendedBlock: Added column {$columnName} to {$tableName}");
                 } catch (\Exception $e) {
-                    Logger::error("ExtendedBlock: Failed to add column {$columnName}: " . $e->getMessage());
+                    Logger::error("ExtendedBlock: Failed to add column {$columnName}: ".$e->getMessage());
                 }
             }
         }
@@ -157,23 +146,21 @@ class TableSchemaService
      * @param ClassDefinition $class              The class definition
      * @param ExtendedBlock   $fieldDefinition    The field definition
      * @param string          $localizedTableName The localized table name
-     *
-     * @return void
      */
     protected function createLocalizedTable(
         ClassDefinition $class,
         ExtendedBlock $fieldDefinition,
-        string $localizedTableName
+        string $localizedTableName,
     ): void {
         $columns = $this->buildLocalizedTableColumns($fieldDefinition);
 
-        $sql = "CREATE TABLE `{$localizedTableName}` (\n" . implode(",\n", $columns) . "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $sql = "CREATE TABLE `{$localizedTableName}` (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         try {
             $this->db->executeStatement($sql);
             Logger::info("ExtendedBlock: Created localized table {$localizedTableName}");
         } catch (\Exception $e) {
-            Logger::error("ExtendedBlock: Failed to create localized table: " . $e->getMessage());
+            Logger::error('ExtendedBlock: Failed to create localized table: '.$e->getMessage());
             throw $e;
         }
     }
@@ -184,13 +171,11 @@ class TableSchemaService
      * @param ClassDefinition $class              The class definition
      * @param ExtendedBlock   $fieldDefinition    The field definition
      * @param string          $localizedTableName The localized table name
-     *
-     * @return void
      */
     protected function updateLocalizedTable(
         ClassDefinition $class,
         ExtendedBlock $fieldDefinition,
-        string $localizedTableName
+        string $localizedTableName,
     ): void {
         $existingColumns = $this->getExistingColumns($localizedTableName);
         $requiredColumns = $this->getLocalizedRequiredColumns($fieldDefinition);
@@ -202,7 +187,7 @@ class TableSchemaService
                     $this->db->executeStatement($sql);
                     Logger::info("ExtendedBlock: Added column {$columnName} to {$localizedTableName}");
                 } catch (\Exception $e) {
-                    Logger::error("ExtendedBlock: Failed to add column: " . $e->getMessage());
+                    Logger::error('ExtendedBlock: Failed to add column: '.$e->getMessage());
                 }
             }
         }
@@ -215,13 +200,11 @@ class TableSchemaService
      *
      * @param string $classId   The class ID
      * @param string $fieldName The field name
-     *
-     * @return void
      */
     public function dropTables(string $classId, string $fieldName): void
     {
         $tableName = $this->getTableName($classId, $fieldName);
-        $localizedTableName = $tableName . '_localized';
+        $localizedTableName = $tableName.'_localized';
 
         // Drop localized table first (foreign key dependency)
         if ($this->tableExists($localizedTableName)) {
@@ -246,7 +229,7 @@ class TableSchemaService
      */
     public function getTableName(string $classId, string $fieldName): string
     {
-        return $this->tablePrefix . $classId . '_' . $fieldName;
+        return $this->tablePrefix.$classId.'_'.$fieldName;
     }
 
     /**
@@ -259,7 +242,7 @@ class TableSchemaService
     protected function tableExists(string $tableName): bool
     {
         $result = $this->db->fetchOne(
-            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?",
+            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
             [$tableName]
         );
 
@@ -278,7 +261,7 @@ class TableSchemaService
         $columns = [];
 
         $rows = $this->db->fetchAllAssociative(
-            "SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ?",
+            'SELECT COLUMN_NAME, COLUMN_TYPE FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ?',
             [$tableName]
         );
 
@@ -454,9 +437,9 @@ class TableSchemaService
     public function listAllTables(): array
     {
         $tables = $this->db->fetchFirstColumn(
-            "SELECT table_name FROM information_schema.tables 
-             WHERE table_schema = DATABASE() AND table_name LIKE ?",
-            [$this->tablePrefix . '%']
+            'SELECT table_name FROM information_schema.tables 
+             WHERE table_schema = DATABASE() AND table_name LIKE ?',
+            [$this->tablePrefix.'%']
         );
 
         return $tables;
@@ -476,13 +459,13 @@ class TableSchemaService
         }
 
         $stats = $this->db->fetchAssociative(
-            "SELECT 
+            'SELECT 
                 TABLE_ROWS as row_count,
                 DATA_LENGTH as data_size,
                 INDEX_LENGTH as index_size,
                 (DATA_LENGTH + INDEX_LENGTH) as total_size
              FROM information_schema.tables 
-             WHERE table_schema = DATABASE() AND table_name = ?",
+             WHERE table_schema = DATABASE() AND table_name = ?',
             [$tableName]
         );
 
