@@ -21,6 +21,7 @@ A Pimcore bundle that extends the block data type by storing data in separate da
 - [Block Nesting Rules](#-block-nesting-rules)
 - [API Reference](#-api-reference)
 - [Testing](#-testing)
+- [Troubleshooting](#-troubleshooting)
 - [Contributing](#-contributing)
 - [License](#-license)
 - [Documentation](#-documentation)
@@ -48,9 +49,34 @@ A Pimcore bundle that extends the block data type by storing data in separate da
 
 ### Step 1: Install via Composer
 
+**Option A: Install from Packagist (if published)**
+
 ```bash
 composer require chauhan-mukesh/extended-block-bundle
 ```
+
+**Option B: Install from GitHub repository**
+
+If the package is not yet available on Packagist, or you want to install directly from GitHub, add the repository to your `composer.json`:
+
+```json
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Chauhan-Mukesh/extended-block"
+        }
+    ]
+}
+```
+
+Then run:
+
+```bash
+composer require chauhan-mukesh/extended-block-bundle:dev-main
+```
+
+> **Note:** When installing from GitHub, you may need to set `"minimum-stability": "dev"` in your `composer.json` or use `@dev` version constraint if no stable releases are tagged.
 
 ### Step 2: Enable the Bundle
 
@@ -577,6 +603,54 @@ composer cs-fix
 
 # Run PHPStan static analysis
 composer phpstan
+```
+
+## 🔧 Troubleshooting
+
+### Package Not Found Error
+
+If you encounter the error:
+
+```
+Could not find a matching version of package chauhan-mukesh/extended-block-bundle
+```
+
+This typically means the package is not yet published to Packagist. Use the GitHub installation method instead:
+
+1. Add the repository to your project's `composer.json`:
+
+```json
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Chauhan-Mukesh/extended-block"
+        }
+    ]
+}
+```
+
+2. Install the package:
+
+```bash
+composer require chauhan-mukesh/extended-block-bundle:dev-main
+```
+
+### Stability Issues
+
+If you get stability-related errors, add the following to your `composer.json`:
+
+```json
+{
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
+```
+
+Or specify the stability when requiring:
+
+```bash
+composer require chauhan-mukesh/extended-block-bundle:dev-main@dev
 ```
 
 ## 🤝 Contributing
