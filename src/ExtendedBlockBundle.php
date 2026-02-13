@@ -105,12 +105,15 @@ class ExtendedBlockBundle extends AbstractPimcoreBundle implements PimcoreBundle
     }
 
     /**
-     * Returns the path to the bundle's routes configuration.
+     * Returns the path to the bundle directory.
      *
-     * @return string The routes file path
+     * This method is used by Symfony's assets:install command to locate
+     * the bundle's Resources/public directory for asset installation.
+     *
+     * @return string The bundle directory path
      */
     public function getPath(): string
     {
-        return \dirname(__DIR__);
+        return __DIR__;
     }
 }
