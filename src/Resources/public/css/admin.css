@@ -1,0 +1,214 @@
+/**
+ * Extended Block Bundle - Admin CSS
+ *
+ * Styles for the Extended Block admin interface.
+ *
+ * @package    ExtendedBlockBundle
+ * @author     Chauhan Mukesh
+ * @copyright  Copyright (c) 2026 Chauhan Mukesh
+ * @license    MIT License
+ */
+
+/* Main container styles */
+.extended-block-container {
+    border: 1px solid #c0c0c0;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+
+.extended-block-container .x-panel-header {
+    background-color: #e8e8e8;
+    border-bottom: 1px solid #d0d0d0;
+}
+
+/* Block item styles */
+.extended-block-item {
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    background-color: #ffffff;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.extended-block-item .x-panel-header {
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.extended-block-item .x-panel-header-title {
+    font-weight: bold;
+    color: #333;
+}
+
+.extended-block-item:hover {
+    border-color: #3b5998;
+}
+
+/* Item being dragged */
+.extended-block-item-dragging {
+    opacity: 0.7;
+    border: 2px dashed #3b5998;
+}
+
+/* Drop zone highlight */
+.extended-block-drop-zone {
+    background-color: #e6f3ff;
+    border: 2px dashed #3b5998;
+}
+
+/* Toolbar styles */
+.extended-block-container .x-toolbar {
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 5px;
+}
+
+/* Add button styles */
+.extended-block-container .pimcore_icon_add {
+    background-color: #4CAF50;
+}
+
+/* Localized fields tab panel within block items */
+.extended-block-item .x-tab-bar {
+    background-color: #f8f8f8;
+}
+
+.extended-block-item .x-tab {
+    border-radius: 3px 3px 0 0;
+}
+
+.extended-block-item .x-tab-active {
+    background-color: #ffffff;
+    border-bottom-color: #ffffff;
+}
+
+/* Field container styles */
+.extended-block-item .x-form-item {
+    margin-bottom: 8px;
+}
+
+.extended-block-item .x-form-item-label {
+    font-weight: 500;
+    color: #555;
+}
+
+/* Tool icons in panel header */
+.extended-block-item .x-tool {
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.extended-block-item:hover .x-tool {
+    opacity: 1;
+}
+
+/* Empty state */
+.extended-block-empty {
+    padding: 40px;
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    background-color: #fafafa;
+    border: 2px dashed #ddd;
+    border-radius: 4px;
+    margin: 10px;
+}
+
+/* Grid view styles for block definitions */
+.extended-block-definitions-grid {
+    border: 1px solid #e0e0e0;
+}
+
+.extended-block-definitions-grid .x-grid-header {
+    background-color: #f5f5f5;
+}
+
+/* Warning message styles */
+.extended-block-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    padding: 10px 15px;
+    margin: 10px 0;
+    color: #856404;
+}
+
+.extended-block-warning::before {
+    content: "⚠️ ";
+}
+
+/* Error message styles */
+.extended-block-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 10px 15px;
+    margin: 10px 0;
+    color: #721c24;
+}
+
+/* Info message styles */
+.extended-block-info {
+    background-color: #d1ecf1;
+    border: 1px solid #bee5eb;
+    border-radius: 4px;
+    padding: 10px 15px;
+    margin: 10px 0;
+    color: #0c5460;
+}
+
+/* Loading state */
+.extended-block-loading {
+    position: relative;
+}
+
+.extended-block-loading::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .extended-block-container {
+        font-size: 12px;
+    }
+
+    .extended-block-item .x-panel-header-title {
+        font-size: 12px;
+    }
+}
+
+/* Dark mode support (when Pimcore supports it) */
+@media (prefers-color-scheme: dark) {
+    .extended-block-container {
+        background-color: #2d2d2d;
+        border-color: #444;
+    }
+
+    .extended-block-item {
+        background-color: #3d3d3d;
+        border-color: #555;
+    }
+
+    .extended-block-item .x-panel-header {
+        background-color: #444;
+        border-color: #555;
+    }
+
+    .extended-block-item .x-panel-header-title {
+        color: #eee;
+    }
+
+    .extended-block-container .x-toolbar {
+        background-color: #3a3a3a;
+        border-color: #444;
+    }
+}

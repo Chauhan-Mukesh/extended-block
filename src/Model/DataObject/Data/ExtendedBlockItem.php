@@ -1,0 +1,521 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Extended Block Bundle - Extended Block Item
+ *
+ * @package    ExtendedBlockBundle
+ * @author     Chauhan Mukesh
+ * @copyright  Copyright (c) 2026 Chauhan Mukesh
+ * @license    MIT License
+ */
+
+namespace ExtendedBlockBundle\Model\DataObject\Data;
+
+use Pimcore\Model\DataObject\Concrete;
+
+/**
+ * Represents a single item within an Extended Block.
+ *
+ * Each ExtendedBlockItem is stored as a row in the extended block table,
+ * with optional localized data stored in a separate table.
+ *
+ * This class provides:
+ * - Storage for all field values defined in the block type
+ * - Localized field data management
+ * - Type identification for block variations
+ * - Index tracking for ordering within the container
+ *
+ * Usage:
+ * ```php
+ * $item = new ExtendedBlockItem('text_block', 0);
+ * $item->setFieldValue('title', 'Hello World');
+ * $item->setFieldValue('content', '<p>Some content</p>');
+ *
+ * // For localized data
+ * $item->setLocalizedValue('en', 'title', 'Hello');
+ * $item->setLocalizedValue('de', 'title', 'Hallo');
+ * ```
+ *
+ * @see \ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockContainer
+ */
+class ExtendedBlockItem
+{
+    /**
+     * Database ID for this item.
+     *
+     * This is set after the item is saved to the database.
+     *
+     * @var int|null
+     */
+    protected ?int $id = null;
+
+    /**
+     * Block type identifier.
+     *
+     * Corresponds to the block type defined in the ExtendedBlock definition.
+     * E.g., 'text_block', 'image_block', 'video_block'
+     *
+     * @var string
+     */
+    protected string $type = 'default';
+
+    /**
+     * Position index within the container.
+     *
+     * Used for ordering block items. Index starts at 0.
+     *
+     * @var int
+     */
+    protected int $index = 0;
+
+    /**
+     * Reference to the parent object.
+     *
+     * @var Concrete|null
+     */
+    protected ?Concrete $object = null;
+
+    /**
+     * Field name of the extended block in the parent object.
+     *
+     * @var string
+     */
+    protected string $fieldname = '';
+
+    /**
+     * Storage for non-localized field values.
+     *
+     * Structure: ['field_name' => value, ...]
+     *
+     * @var array<string, mixed>
+     */
+    protected array $fieldValues = [];
+
+    /**
+     * Storage for localized field values.
+     *
+     * Structure: ['language' => ['field_name' => value, ...], ...]
+     *
+     * @var array<string, array<string, mixed>>
+     */
+    protected array $localizedData = [];
+
+    /**
+     * Marks this item as modified and needing save.
+     *
+     * @var bool
+     */
+    protected bool $modified = false;
+
+    /**
+     * Creates a new ExtendedBlockItem.
+     *
+     * @param string        $type      The block type identifier
+     * @param int           $index     The position index
+     * @param Concrete|null $object    The parent object
+     * @param string        $fieldname The field name
+     */
+    public function __construct(
+        string $type = 'default',
+        int $index = 0,
+        ?Concrete $object = null,
+        string $fieldname = ''
+    ) {
+        $this->type = $type;
+        $this->index = $index;
+        $this->object = $object;
+        $this->fieldname = $fieldname;
+    }
+
+    /**
+     * Gets a field value by name.
+     *
+     * @param string $name The field name
+     *
+     * @return mixed The field value or null if not set
+     */
+    public function getFieldValue(string $name): mixed
+    {
+        return $this->fieldValues[$name] ?? null;
+    }
+
+    /**
+     * Sets a field value by name.
+     *
+     * @param string $name  The field name
+     * @param mixed  $value The value to set
+     *
+     * @return static
+     */
+    public function setFieldValue(string $name, mixed $value): static
+    {
+        $this->fieldValues[$name] = $value;
+        $this->modified = true;
+        return $this;
+    }
+
+    /**
+     * Checks if a field value exists.
+     *
+     * @param string $name The field name
+     *
+     * @return bool True if the field exists
+     */
+    public function hasFieldValue(string $name): bool
+    {
+        return array_key_exists($name, $this->fieldValues);
+    }
+
+    /**
+     * Removes a field value.
+     *
+     * @param string $name The field name
+     *
+     * @return static
+     */
+    public function removeFieldValue(string $name): static
+    {
+        unset($this->fieldValues[$name]);
+        $this->modified = true;
+        return $this;
+    }
+
+    /**
+     * Gets all field values.
+     *
+     * @return array<string, mixed> All field values
+     */
+    public function getAllFieldValues(): array
+    {
+        return $this->fieldValues;
+    }
+
+    /**
+     * Gets a localized field value.
+     *
+     * @param string $language The language code (e.g., 'en', 'de')
+     * @param string $name     The field name
+     *
+     * @return mixed The localized value or null if not set
+     */
+    public function getLocalizedValue(string $language, string $name): mixed
+    {
+        return $this->localizedData[$language][$name] ?? null;
+    }
+
+    /**
+     * Sets a localized field value.
+     *
+     * @param string $language The language code
+     * @param string $name     The field name
+     * @param mixed  $value    The value to set
+     *
+     * @return static
+     */
+    public function setLocalizedValue(string $language, string $name, mixed $value): static
+    {
+        if (!isset($this->localizedData[$language])) {
+            $this->localizedData[$language] = [];
+        }
+
+        $this->localizedData[$language][$name] = $value;
+        $this->modified = true;
+        return $this;
+    }
+
+    /**
+     * Gets all localized values for a specific language.
+     *
+     * @param string $language The language code
+     *
+     * @return array<string, mixed> Localized values for the language
+     */
+    public function getLocalizedValuesForLanguage(string $language): array
+    {
+        return $this->localizedData[$language] ?? [];
+    }
+
+    /**
+     * Gets all localized data for all languages.
+     *
+     * @return array<string, array<string, mixed>> All localized data
+     */
+    public function getLocalizedData(): array
+    {
+        return $this->localizedData;
+    }
+
+    /**
+     * Sets all localized data.
+     *
+     * @param array<string, array<string, mixed>> $data The localized data
+     *
+     * @return static
+     */
+    public function setLocalizedData(array $data): static
+    {
+        $this->localizedData = $data;
+        $this->modified = true;
+        return $this;
+    }
+
+    /**
+     * Checks if localized data exists for a language.
+     *
+     * @param string      $language The language code
+     * @param string|null $name     Optional field name
+     *
+     * @return bool True if localized data exists
+     */
+    public function hasLocalizedData(string $language, ?string $name = null): bool
+    {
+        if (!isset($this->localizedData[$language])) {
+            return false;
+        }
+
+        if ($name !== null) {
+            return array_key_exists($name, $this->localizedData[$language]);
+        }
+
+        return true;
+    }
+
+    /**
+     * Clears all localized data for a language.
+     *
+     * @param string $language The language code
+     *
+     * @return static
+     */
+    public function clearLocalizedData(string $language): static
+    {
+        unset($this->localizedData[$language]);
+        $this->modified = true;
+        return $this;
+    }
+
+    /**
+     * Magic getter for field values.
+     *
+     * Allows accessing field values as properties:
+     * ```php
+     * $item->title; // equivalent to $item->getFieldValue('title');
+     * ```
+     *
+     * @param string $name The field name
+     *
+     * @return mixed The field value
+     */
+    public function __get(string $name): mixed
+    {
+        return $this->getFieldValue($name);
+    }
+
+    /**
+     * Magic setter for field values.
+     *
+     * Allows setting field values as properties:
+     * ```php
+     * $item->title = 'Hello'; // equivalent to $item->setFieldValue('title', 'Hello');
+     * ```
+     *
+     * @param string $name  The field name
+     * @param mixed  $value The value
+     *
+     * @return void
+     */
+    public function __set(string $name, mixed $value): void
+    {
+        $this->setFieldValue($name, $value);
+    }
+
+    /**
+     * Magic isset for field values.
+     *
+     * @param string $name The field name
+     *
+     * @return bool True if field exists
+     */
+    public function __isset(string $name): bool
+    {
+        return $this->hasFieldValue($name);
+    }
+
+    /**
+     * Magic unset for field values.
+     *
+     * @param string $name The field name
+     *
+     * @return void
+     */
+    public function __unset(string $name): void
+    {
+        $this->removeFieldValue($name);
+    }
+
+    /**
+     * Converts the item to an array representation.
+     *
+     * @return array<string, mixed> Array representation
+     */
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'type' => $this->type,
+            'index' => $this->index,
+            'fieldValues' => $this->fieldValues,
+            'localizedData' => $this->localizedData,
+        ];
+    }
+
+    /**
+     * Creates an item from array data.
+     *
+     * @param array<string, mixed> $data      The array data
+     * @param Concrete|null        $object    The parent object
+     * @param string               $fieldname The field name
+     *
+     * @return static The created item
+     */
+    public static function fromArray(array $data, ?Concrete $object = null, string $fieldname = ''): static
+    {
+        $item = new static(
+            type: $data['type'] ?? 'default',
+            index: $data['index'] ?? 0,
+            object: $object,
+            fieldname: $fieldname
+        );
+
+        if (isset($data['id'])) {
+            $item->setId((int) $data['id']);
+        }
+
+        if (isset($data['fieldValues']) && is_array($data['fieldValues'])) {
+            foreach ($data['fieldValues'] as $name => $value) {
+                $item->setFieldValue($name, $value);
+            }
+        }
+
+        if (isset($data['localizedData']) && is_array($data['localizedData'])) {
+            $item->setLocalizedData($data['localizedData']);
+        }
+
+        $item->setModified(false);
+
+        return $item;
+    }
+
+    // Getters and Setters
+
+    /**
+     * @return int|null
+     */
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    /**
+     * @param int|null $id
+     * @return static
+     */
+    public function setId(?int $id): static
+    {
+        $this->id = $id;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getType(): string
+    {
+        return $this->type;
+    }
+
+    /**
+     * @param string $type
+     * @return static
+     */
+    public function setType(string $type): static
+    {
+        $this->type = $type;
+        $this->modified = true;
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getIndex(): int
+    {
+        return $this->index;
+    }
+
+    /**
+     * @param int $index
+     * @return static
+     */
+    public function setIndex(int $index): static
+    {
+        $this->index = $index;
+        return $this;
+    }
+
+    /**
+     * @return Concrete|null
+     */
+    public function getObject(): ?Concrete
+    {
+        return $this->object;
+    }
+
+    /**
+     * @param Concrete|null $object
+     * @return static
+     */
+    public function setObject(?Concrete $object): static
+    {
+        $this->object = $object;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getFieldname(): string
+    {
+        return $this->fieldname;
+    }
+
+    /**
+     * @param string $fieldname
+     * @return static
+     */
+    public function setFieldname(string $fieldname): static
+    {
+        $this->fieldname = $fieldname;
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isModified(): bool
+    {
+        return $this->modified;
+    }
+
+    /**
+     * @param bool $modified
+     * @return static
+     */
+    public function setModified(bool $modified): static
+    {
+        $this->modified = $modified;
+        return $this;
+    }
+}
