@@ -18,7 +18,9 @@ use Pimcore\Db;
 use Pimcore\Logger;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Block;
+use Pimcore\Model\DataObject\ClassDefinition\Data\Fieldcollections;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Localizedfields;
+use Pimcore\Model\DataObject\ClassDefinition\Data\Objectbricks;
 use Pimcore\Model\DataObject\ClassDefinition\Layout;
 use Pimcore\Model\DataObject\Concrete;
 
@@ -803,10 +805,11 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      *
      * Checks for:
      * - Valid block definitions
-     * - No nested ExtendedBlock in LocalizedFields
+     * - No nested ExtendedBlock
      * - No Block inside ExtendedBlock
-     * - No ExtendedBlock inside Block
-     * - Proper field naming
+     * - No Fieldcollections inside ExtendedBlock
+     * - No Objectbricks inside ExtendedBlock
+     * - No invalid fields inside LocalizedFields within ExtendedBlock
      *
      * @throws \Exception If validation fails
      */
@@ -835,7 +838,17 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                         throw new \Exception("ExtendedBlock cannot contain a Block. Type: {$typeName}. ".'Block nesting is not supported to ensure data integrity and prevent performance issues.');
                     }
 
-                    // Check for ExtendedBlock/Block inside LocalizedFields
+                    // Check for Fieldcollections inside ExtendedBlock
+                    if ($field instanceof Fieldcollections) {
+                        throw new \Exception("ExtendedBlock cannot contain Fieldcollections. Type: {$typeName}. ".'FieldCollections are complex container types that cannot be nested inside ExtendedBlock.');
+                    }
+
+                    // Check for Objectbricks inside ExtendedBlock
+                    if ($field instanceof Objectbricks) {
+                        throw new \Exception("ExtendedBlock cannot contain Objectbricks. Type: {$typeName}. ".'ObjectBricks are complex container types that cannot be nested inside ExtendedBlock.');
+                    }
+
+                    // Check for invalid fields inside LocalizedFields within ExtendedBlock
                     if ($field instanceof Localizedfields) {
                         foreach ($field->getFieldDefinitions() as $localizedField) {
                             if ($localizedField instanceof self) {
@@ -843,6 +856,12 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                             }
                             if ($localizedField instanceof Block) {
                                 throw new \Exception('Block cannot be placed inside LocalizedFields within an ExtendedBlock. '."Type: {$typeName}. Block nesting is not supported.");
+                            }
+                            if ($localizedField instanceof Fieldcollections) {
+                                throw new \Exception('Fieldcollections cannot be placed inside LocalizedFields within an ExtendedBlock. '."Type: {$typeName}");
+                            }
+                            if ($localizedField instanceof Objectbricks) {
+                                throw new \Exception('Objectbricks cannot be placed inside LocalizedFields within an ExtendedBlock. '."Type: {$typeName}");
                             }
                         }
                     }

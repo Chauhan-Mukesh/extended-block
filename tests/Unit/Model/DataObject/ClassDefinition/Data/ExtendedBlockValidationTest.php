@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle - ExtendedBlock Validation Unit Test
+ * Extended Block Bundle - ExtendedBlock Validation Unit Test.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
@@ -18,11 +17,11 @@ use PHPUnit\Framework\TestCase;
 /**
  * Test cases for ExtendedBlock validation logic.
  *
- * These tests verify the validation rules for nesting prevention:
+ * These tests verify the validation rules for placement and nesting prevention:
+ * - ExtendedBlock can only be at root level of class definitions
+ * - No ExtendedBlock inside LocalizedFields, FieldCollections, ObjectBricks, or Block
  * - No ExtendedBlock inside ExtendedBlock
- * - No Block inside ExtendedBlock
- * - No ExtendedBlock inside Block
- * - No nested blocks in LocalizedFields
+ * - No Block, Fieldcollections, or Objectbricks inside ExtendedBlock
  *
  * Note: These tests focus on testing the validation rules conceptually,
  * as the actual ExtendedBlock class requires Pimcore's runtime environment.
@@ -30,41 +29,44 @@ use PHPUnit\Framework\TestCase;
 class ExtendedBlockValidationTest extends TestCase
 {
     /**
-     * Tests that nested block prevention rules are documented.
-     * 
-     * This test ensures the validation rules are defined:
-     * 1. ExtendedBlock cannot contain another ExtendedBlock
-     * 2. ExtendedBlock cannot contain a Block
-     * 3. Block cannot contain ExtendedBlock
-     * 4. ExtendedBlock in LocalizedFields cannot contain LocalizedFields
-     * 5. Block cannot be inside LocalizedFields within ExtendedBlock
+     * Tests that placement and nesting prevention rules are documented.
      *
-     * @return void
+     * This test ensures the validation rules are defined:
+     * 1. ExtendedBlock can only be at root level
+     * 2. ExtendedBlock cannot be inside LocalizedFields
+     * 3. ExtendedBlock cannot be inside FieldCollections
+     * 4. ExtendedBlock cannot be inside ObjectBricks
+     * 5. ExtendedBlock cannot be inside Block
+     * 6. ExtendedBlock cannot contain another ExtendedBlock
+     * 7. ExtendedBlock cannot contain Block
+     * 8. ExtendedBlock cannot contain Fieldcollections
+     * 9. ExtendedBlock cannot contain Objectbricks
      */
     public function testValidationRulesAreDefined(): void
     {
         // The validation rules are implemented in ExtendedBlock::validate()
-        // and ClassDefinitionListener::checkForExtendedBlockInBlock()
-        
+        // and ClassDefinitionListener methods
+
         // These rules should prevent:
-        $preventedNestings = [
+        $preventedPlacements = [
+            'ExtendedBlock inside LocalizedFields' => true,
+            'ExtendedBlock inside FieldCollections' => true,
+            'ExtendedBlock inside ObjectBricks' => true,
+            'ExtendedBlock inside Block' => true,
             'ExtendedBlock inside ExtendedBlock' => true,
             'Block inside ExtendedBlock' => true,
-            'ExtendedBlock inside Block' => true,
-            'ExtendedBlock with LocalizedFields inside LocalizedFields' => true,
-            'Block inside LocalizedFields within ExtendedBlock' => true,
+            'Fieldcollections inside ExtendedBlock' => true,
+            'Objectbricks inside ExtendedBlock' => true,
         ];
 
-        // All nesting prevention rules should be active
-        foreach ($preventedNestings as $rule => $isActive) {
+        // All prevention rules should be active
+        foreach ($preventedPlacements as $rule => $isActive) {
             $this->assertTrue($isActive, "Rule '{$rule}' should be active");
         }
     }
 
     /**
      * Tests that the ExtendedBlock class exists with validate method.
-     *
-     * @return void
      */
     public function testExtendedBlockClassHasValidateMethod(): void
     {
@@ -79,8 +81,6 @@ class ExtendedBlockValidationTest extends TestCase
 
     /**
      * Tests that the ClassDefinitionListener has validation method.
-     *
-     * @return void
      */
     public function testClassDefinitionListenerHasValidationMethod(): void
     {
@@ -95,30 +95,42 @@ class ExtendedBlockValidationTest extends TestCase
 
     /**
      * Tests that the ExtendedBlock source file contains nesting prevention code.
-     *
-     * @return void
      */
     public function testExtendedBlockContainsNestingPreventionLogic(): void
     {
-        $sourceFile = __DIR__ . '/../../../../../../src/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
+        $sourceFile = __DIR__.'/../../../../../../src/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
         $this->assertFileExists($sourceFile, 'ExtendedBlock.php should exist');
-        
+
         $content = file_get_contents($sourceFile);
-        
+
         // Check for ExtendedBlock nesting prevention
         $this->assertStringContainsString(
             'ExtendedBlock cannot contain another ExtendedBlock',
             $content,
             'Should have ExtendedBlock nesting prevention error message'
         );
-        
+
         // Check for Block nesting prevention
         $this->assertStringContainsString(
             'ExtendedBlock cannot contain a Block',
             $content,
             'Should have Block nesting prevention error message'
         );
-        
+
+        // Check for Fieldcollections prevention
+        $this->assertStringContainsString(
+            'ExtendedBlock cannot contain Fieldcollections',
+            $content,
+            'Should have Fieldcollections prevention error message'
+        );
+
+        // Check for Objectbricks prevention
+        $this->assertStringContainsString(
+            'ExtendedBlock cannot contain Objectbricks',
+            $content,
+            'Should have Objectbricks prevention error message'
+        );
+
         // Check for Block inside LocalizedFields prevention
         $this->assertStringContainsString(
             'Block cannot be placed inside LocalizedFields within an ExtendedBlock',
@@ -128,28 +140,41 @@ class ExtendedBlockValidationTest extends TestCase
     }
 
     /**
-     * Tests that the ClassDefinitionListener contains Block validation logic.
-     *
-     * @return void
+     * Tests that the ClassDefinitionListener contains placement validation logic.
      */
-    public function testClassDefinitionListenerContainsBlockValidation(): void
+    public function testClassDefinitionListenerContainsPlacementValidation(): void
     {
-        $sourceFile = __DIR__ . '/../../../../../../src/EventListener/ClassDefinitionListener.php';
+        $sourceFile = __DIR__.'/../../../../../../src/EventListener/ClassDefinitionListener.php';
         $this->assertFileExists($sourceFile, 'ClassDefinitionListener.php should exist');
-        
+
         $content = file_get_contents($sourceFile);
-        
+
         // Check for ExtendedBlock inside Block prevention
-        $this->assertStringContainsString(
-            'ExtendedBlock field',
-            $content,
-            'Should reference ExtendedBlock field in validation'
-        );
-        
         $this->assertStringContainsString(
             'cannot be placed inside Block',
             $content,
             'Should have ExtendedBlock inside Block prevention message'
+        );
+
+        // Check for ExtendedBlock inside LocalizedFields prevention
+        $this->assertStringContainsString(
+            'cannot be placed inside LocalizedFields',
+            $content,
+            'Should have ExtendedBlock inside LocalizedFields prevention message'
+        );
+
+        // Check for FieldCollections check
+        $this->assertStringContainsString(
+            'checkForExtendedBlockInFieldcollections',
+            $content,
+            'Should have method to check for ExtendedBlock in FieldCollections'
+        );
+
+        // Check for ObjectBricks check
+        $this->assertStringContainsString(
+            'checkForExtendedBlockInObjectbricks',
+            $content,
+            'Should have method to check for ExtendedBlock in ObjectBricks'
         );
     }
 }

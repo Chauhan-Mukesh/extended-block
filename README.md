@@ -409,40 +409,64 @@ $enData = $item->getLocalizedValuesForLanguage('en');
 $allLocalized = $item->getLocalizedData();
 ```
 
-### Nesting Prevention
+## 🚫 Placement and Nesting Rules
 
-To prevent infinite recursion, ExtendedBlock with LocalizedFields cannot be placed inside a LocalizedFields container:
+ExtendedBlock can **only** be placed at the root level of a class definition. To ensure data integrity and prevent performance issues, the following configurations are **not allowed**:
 
-```
-❌ Invalid:
-LocalizedFields
-└── ExtendedBlock (with LocalizedFields inside)
-    └── LocalizedFields  # Would cause recursion!
+### Where ExtendedBlock CAN be Used
 
-✅ Valid:
-ExtendedBlock
-└── LocalizedFields
-    └── title
-    └── description
-```
+| Location | Allowed |
+|----------|---------|
+| Root level of Class Definition | ✅ Yes |
 
-## 🚫 Block Nesting Rules
+### Where ExtendedBlock CANNOT be Used
 
-To ensure data integrity and prevent performance issues, the following nesting configurations are **not allowed**:
+| Location | Reason |
+|----------|--------|
+| Inside LocalizedFields | Complex table relationships would break |
+| Inside FieldCollections | FieldCollections have their own storage mechanism |
+| Inside ObjectBricks | ObjectBricks have their own storage mechanism |
+| Inside Block | Block uses serialized JSON storage |
+| Inside another ExtendedBlock | Would cause infinite recursion |
 
-### Disallowed Configurations
+### What ExtendedBlock CANNOT Contain
 
-| Configuration | Reason |
-|--------------|--------|
-| ExtendedBlock inside ExtendedBlock | Could cause infinite recursion and complex data relationships |
-| Block inside ExtendedBlock | Standard Block uses different storage mechanism |
-| ExtendedBlock inside Block | ExtendedBlock requires separate table storage |
-| Block inside LocalizedFields within ExtendedBlock | Block nesting is not supported |
-| ExtendedBlock with LocalizedFields inside LocalizedFields | Would cause table relationship conflicts |
+| Field Type | Reason |
+|------------|--------|
+| ExtendedBlock | Would cause infinite recursion and complex data relationships |
+| Block | Standard Block uses different storage mechanism |
+| Fieldcollections | Complex container types cannot be nested |
+| Objectbricks | Complex container types cannot be nested |
 
 ### Examples
 
 ```
+❌ Invalid: ExtendedBlock inside LocalizedFields
+LocalizedFields
+└── contentBlocks (ExtendedBlock)  # Not allowed!
+
+❌ Invalid: ExtendedBlock inside FieldCollection
+myFieldCollection (Fieldcollections)
+└── contentBlocks (ExtendedBlock)  # Not allowed!
+
+❌ Invalid: ExtendedBlock inside ObjectBrick
+myObjectBrick (Objectbricks)
+└── contentBlocks (ExtendedBlock)  # Not allowed!
+
+❌ Invalid: ExtendedBlock inside Block
+mainBlock (Block)
+└── contentBlocks (ExtendedBlock)  # Not allowed!
+
+❌ Invalid: FieldCollections inside ExtendedBlock
+contentBlocks (ExtendedBlock)
+└── text_block
+    └── myCollection (Fieldcollections)  # Not allowed!
+
+❌ Invalid: ObjectBricks inside ExtendedBlock
+contentBlocks (ExtendedBlock)
+└── text_block
+    └── myBricks (Objectbricks)  # Not allowed!
+
 ❌ Invalid: ExtendedBlock nesting
 contentBlocks (ExtendedBlock)
 └── text_block
@@ -453,26 +477,25 @@ contentBlocks (ExtendedBlock)
 └── text_block
     └── innerBlock (Block)  # Not allowed!
 
-❌ Invalid: ExtendedBlock inside Block  
-mainBlock (Block)
-└── contentBlocks (ExtendedBlock)  # Not allowed!
-
-✅ Valid: Flat ExtendedBlock with various fields
-contentBlocks (ExtendedBlock)
-├── text_block
-│   ├── title (Input)
-│   ├── content (WYSIWYG)
-│   └── LocalizedFields
-│       ├── headline (Input)
-│       └── teaser (Textarea)
-└── image_block
-    ├── image (Image)
-    └── caption (Input)
+✅ Valid: ExtendedBlock at root level with simple fields
+Class: Product
+├── name (Input)
+├── contentBlocks (ExtendedBlock)  # At root level ✓
+│   ├── text_block
+│   │   ├── title (Input)
+│   │   ├── content (WYSIWYG)
+│   │   └── LocalizedFields
+│   │       ├── headline (Input)
+│   │       └── teaser (Textarea)
+│   └── image_block
+│       ├── image (Image)
+│       └── caption (Input)
+└── price (Numeric)
 ```
 
 ### Validation
 
-The bundle automatically validates your class definition when saving and will throw an exception if any invalid nesting is detected. This validation occurs both in the admin UI and via the PHP API.
+The bundle automatically validates your class definition when saving and will throw an exception if any invalid placement or nesting is detected. This validation occurs both in the admin UI and via the PHP API.
 
 ## 📚 API Reference
 
