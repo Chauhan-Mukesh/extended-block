@@ -98,7 +98,7 @@ class ExtendedBlockValidationTest extends TestCase
      */
     public function testExtendedBlockContainsNestingPreventionLogic(): void
     {
-        $sourceFile = __DIR__.'/../../../../../../src/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
+        $sourceFile = __DIR__ . '/../../../../../../src/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
         $this->assertFileExists($sourceFile, 'ExtendedBlock.php should exist');
 
         $content = file_get_contents($sourceFile);
@@ -144,7 +144,7 @@ class ExtendedBlockValidationTest extends TestCase
      */
     public function testClassDefinitionListenerContainsPlacementValidation(): void
     {
-        $sourceFile = __DIR__.'/../../../../../../src/EventListener/ClassDefinitionListener.php';
+        $sourceFile = __DIR__ . '/../../../../../../src/EventListener/ClassDefinitionListener.php';
         $this->assertFileExists($sourceFile, 'ClassDefinitionListener.php should exist');
 
         $content = file_get_contents($sourceFile);

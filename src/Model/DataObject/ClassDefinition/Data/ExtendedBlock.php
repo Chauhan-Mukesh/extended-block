@@ -840,12 +840,12 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
 
                     // Check for Fieldcollections inside ExtendedBlock
                     if ($field instanceof Fieldcollections) {
-                        throw new \Exception("ExtendedBlock cannot contain Fieldcollections. Type: {$typeName}. ".'FieldCollections are complex container types that cannot be nested inside ExtendedBlock.');
+                        throw new \Exception("ExtendedBlock cannot contain Fieldcollections. Type: {$typeName}. ".'Fieldcollections are complex container types that cannot be nested inside ExtendedBlock.');
                     }
 
                     // Check for Objectbricks inside ExtendedBlock
                     if ($field instanceof Objectbricks) {
-                        throw new \Exception("ExtendedBlock cannot contain Objectbricks. Type: {$typeName}. ".'ObjectBricks are complex container types that cannot be nested inside ExtendedBlock.');
+                        throw new \Exception("ExtendedBlock cannot contain Objectbricks. Type: {$typeName}. ".'Objectbricks are complex container types that cannot be nested inside ExtendedBlock.');
                     }
 
                     // Check for invalid fields inside LocalizedFields within ExtendedBlock
