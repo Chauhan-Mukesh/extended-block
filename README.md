@@ -418,6 +418,12 @@ ExtendedBlock can **only** be placed at the root level of a class definition. To
 | Location | Allowed |
 |----------|---------|
 | Root level of Class Definition | ✅ Yes |
+| Inside Tabpanel (layout) | ✅ Yes |
+| Inside Panel (layout) | ✅ Yes |
+| Inside Fieldcontainer (layout) | ✅ Yes |
+| Inside any layout container at root level | ✅ Yes |
+
+> **Note:** Layout containers (Tabpanel, Panel, Fieldcontainer, etc.) are transparent wrappers in Pimcore class definitions. ExtendedBlock can be placed inside any layout container as long as it's at the root level of the class definition.
 
 ### Where ExtendedBlock CANNOT be Used
 
@@ -491,6 +497,20 @@ Class: Product
 │       ├── image (Image)
 │       └── caption (Input)
 └── price (Numeric)
+
+✅ Valid: ExtendedBlock inside layout containers
+Class: Product
+└── Tabpanel (layout)
+    ├── Panel "General" (layout)
+    │   ├── name (Input)
+    │   └── price (Numeric)
+    └── Panel "Content" (layout)
+        └── Fieldcontainer (layout)
+            └── contentBlocks (ExtendedBlock)  # Inside layouts at root level ✓
+                ├── text_block
+                │   └── title (Input)
+                └── image_block
+                    └── image (Image)
 ```
 
 ### Validation
