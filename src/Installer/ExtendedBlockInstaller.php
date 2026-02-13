@@ -186,7 +186,7 @@ class ExtendedBlockInstaller extends AbstractInstaller
 
             // Explicitly check for table existence - fetchOne returns string '0' or '1' for COUNT
             // or false on failure. Cast to int for reliable comparison.
-            if ((int) $tableExists < 1) {
+            if (0 === (int) $tableExists) {
                 return false;
             }
 
@@ -201,7 +201,7 @@ class ExtendedBlockInstaller extends AbstractInstaller
 
             // Check if version exists and is not empty
             // fetchOne returns false when no row found, or the value when found
-            return false !== $version && null !== $version && '' !== $version;
+            return !\in_array($version, [false, null, ''], true);
         } catch (\Exception $e) {
             return false;
         }
