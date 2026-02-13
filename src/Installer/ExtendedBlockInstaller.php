@@ -93,16 +93,19 @@ class ExtendedBlockInstaller implements InstallerInterface
             // Create metadata table
             $this->createMetadataTable();
 
+            // Use quoteIdentifier for consistent security practice
+            $quotedTable = $this->db->quoteIdentifier(self::METADATA_TABLE);
+
             // Record installation
             $this->db->executeStatement(
-                'INSERT INTO `'.self::METADATA_TABLE.'` (key_name, value) VALUES (?, ?) 
-                 ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                "INSERT INTO {$quotedTable} (key_name, value) VALUES (?, ?) 
+                 ON DUPLICATE KEY UPDATE value = VALUES(value)",
                 ['version', self::VERSION]
             );
 
             $this->db->executeStatement(
-                'INSERT INTO `'.self::METADATA_TABLE.'` (key_name, value) VALUES (?, ?) 
-                 ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                "INSERT INTO {$quotedTable} (key_name, value) VALUES (?, ?) 
+                 ON DUPLICATE KEY UPDATE value = VALUES(value)",
                 ['installed_at', date('Y-m-d H:i:s')]
             );
 
@@ -131,15 +134,18 @@ class ExtendedBlockInstaller implements InstallerInterface
             // Run migrations based on version
             $this->runMigrations($currentVersion, self::VERSION);
 
+            // Use quoteIdentifier for consistent security practice
+            $quotedTable = $this->db->quoteIdentifier(self::METADATA_TABLE);
+
             // Update version in metadata
             $this->db->executeStatement(
-                'UPDATE `'.self::METADATA_TABLE.'` SET value = ? WHERE key_name = ?',
+                "UPDATE {$quotedTable} SET value = ? WHERE key_name = ?",
                 [self::VERSION, 'version']
             );
 
             $this->db->executeStatement(
-                'INSERT INTO `'.self::METADATA_TABLE.'` (key_name, value) VALUES (?, ?) 
-                 ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                "INSERT INTO {$quotedTable} (key_name, value) VALUES (?, ?) 
+                 ON DUPLICATE KEY UPDATE value = VALUES(value)",
                 ['updated_at', date('Y-m-d H:i:s')]
             );
 
@@ -167,8 +173,11 @@ class ExtendedBlockInstaller implements InstallerInterface
         $this->outputWriter->write('Note: Extended block data tables are preserved. Use console command to remove them manually.');
 
         try {
+            // Use quoteIdentifier for consistent security practice
+            $quotedTable = $this->db->quoteIdentifier(self::METADATA_TABLE);
+
             // Remove metadata table
-            $this->db->executeStatement('DROP TABLE IF EXISTS `'.self::METADATA_TABLE.'`');
+            $this->db->executeStatement("DROP TABLE IF EXISTS {$quotedTable}");
 
             $this->outputWriter->write('Extended Block Bundle uninstalled successfully!');
         } catch (\Exception $e) {
@@ -185,7 +194,7 @@ class ExtendedBlockInstaller implements InstallerInterface
     public function isInstalled(): bool
     {
         try {
-            // Check if metadata table exists
+            // Check if metadata table exists (parameterized query for table name)
             $tableExists = $this->db->fetchOne(
                 'SELECT COUNT(*) FROM information_schema.tables 
                  WHERE table_schema = DATABASE() AND table_name = ?',
@@ -196,9 +205,12 @@ class ExtendedBlockInstaller implements InstallerInterface
                 return false;
             }
 
+            // Use quoteIdentifier for consistent security practice
+            $quotedTable = $this->db->quoteIdentifier(self::METADATA_TABLE);
+
             // Check for version entry
             $version = $this->db->fetchOne(
-                'SELECT value FROM `'.self::METADATA_TABLE.'` WHERE key_name = ?',
+                "SELECT value FROM {$quotedTable} WHERE key_name = ?",
                 ['version']
             );
 
@@ -262,8 +274,11 @@ class ExtendedBlockInstaller implements InstallerInterface
     protected function getInstalledVersion(): string
     {
         try {
+            // Use quoteIdentifier for consistent security practice
+            $quotedTable = $this->db->quoteIdentifier(self::METADATA_TABLE);
+
             $version = $this->db->fetchOne(
-                'SELECT value FROM `'.self::METADATA_TABLE.'` WHERE key_name = ?',
+                "SELECT value FROM {$quotedTable} WHERE key_name = ?",
                 ['version']
             );
 
@@ -278,7 +293,10 @@ class ExtendedBlockInstaller implements InstallerInterface
      */
     protected function createMetadataTable(): void
     {
-        $sql = 'CREATE TABLE IF NOT EXISTS `'.self::METADATA_TABLE.'` (
+        // Use quoteIdentifier for consistent security practice
+        $quotedTable = $this->db->quoteIdentifier(self::METADATA_TABLE);
+
+        $sql = "CREATE TABLE IF NOT EXISTS {$quotedTable} (
             `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
             `key_name` VARCHAR(100) NOT NULL,
             `value` TEXT,
@@ -286,7 +304,7 @@ class ExtendedBlockInstaller implements InstallerInterface
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
             UNIQUE KEY `key_name` (`key_name`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4';
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         $this->db->executeStatement($sql);
     }

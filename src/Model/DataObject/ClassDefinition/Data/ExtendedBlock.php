@@ -751,11 +751,9 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      */
     protected function ensureTableExists(string $classId): void
     {
+        // getTableName() validates classId and tableName
         $tableName = $this->getTableName($classId);
         $db = Db::get();
-
-        // Validate table name before using it
-        IdentifierValidator::validateTableName($tableName);
 
         // Check if table already exists (parameterized query)
         $tableExists = $db->fetchOne(
@@ -817,11 +815,9 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      */
     protected function ensureLocalizedTableExists(string $classId): void
     {
+        // getLocalizedTableName() validates via getTableName()
         $tableName = $this->getLocalizedTableName($classId);
         $db = Db::get();
-
-        // Validate table name before using it
-        IdentifierValidator::validateTableName($tableName);
 
         // Check if table already exists (parameterized query)
         $tableExists = $db->fetchOne(

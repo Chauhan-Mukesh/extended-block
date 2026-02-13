@@ -96,13 +96,10 @@ class TableSchemaService
      *
      * @param ClassDefinition $class           The class definition
      * @param ExtendedBlock   $fieldDefinition The field definition
-     * @param string          $tableName       The table name (already validated)
+     * @param string          $tableName       The table name (already validated by getTableName())
      */
     protected function createTable(ClassDefinition $class, ExtendedBlock $fieldDefinition, string $tableName): void
     {
-        // Table name is already validated in getTableName(), but validate again for safety
-        IdentifierValidator::validateTableName($tableName);
-
         $columns = $this->buildMainTableColumns($fieldDefinition);
 
         // Use quoteIdentifier to safely escape the table name
@@ -123,13 +120,10 @@ class TableSchemaService
      *
      * @param ClassDefinition $class           The class definition
      * @param ExtendedBlock   $fieldDefinition The field definition
-     * @param string          $tableName       The table name (already validated)
+     * @param string          $tableName       The table name (already validated by getTableName())
      */
     protected function updateTable(ClassDefinition $class, ExtendedBlock $fieldDefinition, string $tableName): void
     {
-        // Table name is already validated, but validate again for safety
-        IdentifierValidator::validateTableName($tableName);
-
         $existingColumns = $this->getExistingColumns($tableName);
         $requiredColumns = $this->getRequiredColumns($fieldDefinition);
 
@@ -160,16 +154,13 @@ class TableSchemaService
      *
      * @param ClassDefinition $class              The class definition
      * @param ExtendedBlock   $fieldDefinition    The field definition
-     * @param string          $localizedTableName The localized table name (already validated)
+     * @param string          $localizedTableName The localized table name (already validated by caller)
      */
     protected function createLocalizedTable(
         ClassDefinition $class,
         ExtendedBlock $fieldDefinition,
         string $localizedTableName,
     ): void {
-        // Validate the localized table name
-        IdentifierValidator::validateTableName($localizedTableName);
-
         $columns = $this->buildLocalizedTableColumns($fieldDefinition);
 
         $quotedTable = $this->db->quoteIdentifier($localizedTableName);
@@ -189,16 +180,13 @@ class TableSchemaService
      *
      * @param ClassDefinition $class              The class definition
      * @param ExtendedBlock   $fieldDefinition    The field definition
-     * @param string          $localizedTableName The localized table name (already validated)
+     * @param string          $localizedTableName The localized table name (already validated by caller)
      */
     protected function updateLocalizedTable(
         ClassDefinition $class,
         ExtendedBlock $fieldDefinition,
         string $localizedTableName,
     ): void {
-        // Validate the table name
-        IdentifierValidator::validateTableName($localizedTableName);
-
         $existingColumns = $this->getExistingColumns($localizedTableName);
         $requiredColumns = $this->getLocalizedRequiredColumns($fieldDefinition);
 
@@ -232,11 +220,11 @@ class TableSchemaService
      */
     public function dropTables(string $classId, string $fieldName): void
     {
+        // getTableName() validates classId and fieldName
         $tableName = $this->getTableName($classId, $fieldName);
         $localizedTableName = $tableName.'_localized';
 
-        // Validate both table names
-        IdentifierValidator::validateTableName($tableName);
+        // Validate the localized table name (may exceed length with _localized suffix)
         IdentifierValidator::validateTableName($localizedTableName);
 
         $quotedLocalizedTable = $this->db->quoteIdentifier($localizedTableName);
