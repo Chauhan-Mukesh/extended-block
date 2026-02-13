@@ -51,11 +51,13 @@ class TableSchemaService
      * Creates a new TableSchemaService.
      *
      * @param string $tablePrefix The table prefix (from configuration)
+     *
+     * @throws \InvalidArgumentException If table prefix is invalid
      */
     public function __construct(string $tablePrefix = 'object_eb_')
     {
         $this->db = Db::get();
-        $this->tablePrefix = $tablePrefix;
+        $this->tablePrefix = IdentifierValidator::validateTablePrefix($tablePrefix);
     }
 
     /**
@@ -94,13 +96,18 @@ class TableSchemaService
      *
      * @param ClassDefinition $class           The class definition
      * @param ExtendedBlock   $fieldDefinition The field definition
-     * @param string          $tableName       The table name
+     * @param string          $tableName       The table name (already validated)
      */
     protected function createTable(ClassDefinition $class, ExtendedBlock $fieldDefinition, string $tableName): void
     {
+        // Table name is already validated in getTableName(), but validate again for safety
+        IdentifierValidator::validateTableName($tableName);
+
         $columns = $this->buildMainTableColumns($fieldDefinition);
 
-        $sql = "CREATE TABLE `{$tableName}` (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        // Use quoteIdentifier to safely escape the table name
+        $quotedTable = $this->db->quoteIdentifier($tableName);
+        $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         try {
             $this->db->executeStatement($sql);
@@ -116,17 +123,25 @@ class TableSchemaService
      *
      * @param ClassDefinition $class           The class definition
      * @param ExtendedBlock   $fieldDefinition The field definition
-     * @param string          $tableName       The table name
+     * @param string          $tableName       The table name (already validated)
      */
     protected function updateTable(ClassDefinition $class, ExtendedBlock $fieldDefinition, string $tableName): void
     {
+        // Table name is already validated, but validate again for safety
+        IdentifierValidator::validateTableName($tableName);
+
         $existingColumns = $this->getExistingColumns($tableName);
         $requiredColumns = $this->getRequiredColumns($fieldDefinition);
+
+        $quotedTable = $this->db->quoteIdentifier($tableName);
 
         // Add missing columns
         foreach ($requiredColumns as $columnName => $columnDefinition) {
             if (!isset($existingColumns[$columnName])) {
-                $sql = "ALTER TABLE `{$tableName}` ADD COLUMN `{$columnName}` {$columnDefinition}";
+                // Validate and quote the column name
+                IdentifierValidator::validateColumnName($columnName);
+                $quotedColumn = $this->db->quoteIdentifier($columnName);
+                $sql = "ALTER TABLE {$quotedTable} ADD COLUMN {$quotedColumn} {$columnDefinition}";
                 try {
                     $this->db->executeStatement($sql);
                     Logger::info("ExtendedBlock: Added column {$columnName} to {$tableName}");
@@ -145,16 +160,20 @@ class TableSchemaService
      *
      * @param ClassDefinition $class              The class definition
      * @param ExtendedBlock   $fieldDefinition    The field definition
-     * @param string          $localizedTableName The localized table name
+     * @param string          $localizedTableName The localized table name (already validated)
      */
     protected function createLocalizedTable(
         ClassDefinition $class,
         ExtendedBlock $fieldDefinition,
         string $localizedTableName,
     ): void {
+        // Validate the localized table name
+        IdentifierValidator::validateTableName($localizedTableName);
+
         $columns = $this->buildLocalizedTableColumns($fieldDefinition);
 
-        $sql = "CREATE TABLE `{$localizedTableName}` (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $quotedTable = $this->db->quoteIdentifier($localizedTableName);
+        $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         try {
             $this->db->executeStatement($sql);
@@ -170,19 +189,27 @@ class TableSchemaService
      *
      * @param ClassDefinition $class              The class definition
      * @param ExtendedBlock   $fieldDefinition    The field definition
-     * @param string          $localizedTableName The localized table name
+     * @param string          $localizedTableName The localized table name (already validated)
      */
     protected function updateLocalizedTable(
         ClassDefinition $class,
         ExtendedBlock $fieldDefinition,
         string $localizedTableName,
     ): void {
+        // Validate the table name
+        IdentifierValidator::validateTableName($localizedTableName);
+
         $existingColumns = $this->getExistingColumns($localizedTableName);
         $requiredColumns = $this->getLocalizedRequiredColumns($fieldDefinition);
 
+        $quotedTable = $this->db->quoteIdentifier($localizedTableName);
+
         foreach ($requiredColumns as $columnName => $columnDefinition) {
             if (!isset($existingColumns[$columnName])) {
-                $sql = "ALTER TABLE `{$localizedTableName}` ADD COLUMN `{$columnName}` {$columnDefinition}";
+                // Validate and quote the column name
+                IdentifierValidator::validateColumnName($columnName);
+                $quotedColumn = $this->db->quoteIdentifier($columnName);
+                $sql = "ALTER TABLE {$quotedTable} ADD COLUMN {$quotedColumn} {$columnDefinition}";
                 try {
                     $this->db->executeStatement($sql);
                     Logger::info("ExtendedBlock: Added column {$columnName} to {$localizedTableName}");
@@ -200,21 +227,30 @@ class TableSchemaService
      *
      * @param string $classId   The class ID
      * @param string $fieldName The field name
+     *
+     * @throws \InvalidArgumentException If classId or fieldName is invalid
      */
     public function dropTables(string $classId, string $fieldName): void
     {
         $tableName = $this->getTableName($classId, $fieldName);
         $localizedTableName = $tableName.'_localized';
 
+        // Validate both table names
+        IdentifierValidator::validateTableName($tableName);
+        IdentifierValidator::validateTableName($localizedTableName);
+
+        $quotedLocalizedTable = $this->db->quoteIdentifier($localizedTableName);
+        $quotedTable = $this->db->quoteIdentifier($tableName);
+
         // Drop localized table first (foreign key dependency)
         if ($this->tableExists($localizedTableName)) {
-            $this->db->executeStatement("DROP TABLE `{$localizedTableName}`");
+            $this->db->executeStatement("DROP TABLE {$quotedLocalizedTable}");
             Logger::info("ExtendedBlock: Dropped table {$localizedTableName}");
         }
 
         // Drop main table
         if ($this->tableExists($tableName)) {
-            $this->db->executeStatement("DROP TABLE `{$tableName}`");
+            $this->db->executeStatement("DROP TABLE {$quotedTable}");
             Logger::info("ExtendedBlock: Dropped table {$tableName}");
         }
     }
@@ -225,11 +261,22 @@ class TableSchemaService
      * @param string $classId   The class ID
      * @param string $fieldName The field name
      *
-     * @return string The table name
+     * @return string The validated table name
+     *
+     * @throws \InvalidArgumentException If classId or fieldName is invalid
      */
     public function getTableName(string $classId, string $fieldName): string
     {
-        return $this->tablePrefix.$classId.'_'.$fieldName;
+        // Validate inputs before constructing the table name
+        IdentifierValidator::validateClassId($classId);
+        IdentifierValidator::validateFieldName($fieldName);
+
+        $tableName = $this->tablePrefix.$classId.'_'.$fieldName;
+
+        // Validate the full table name as well
+        IdentifierValidator::validateTableName($tableName);
+
+        return $tableName;
     }
 
     /**
@@ -278,6 +325,8 @@ class TableSchemaService
      * @param ExtendedBlock $fieldDefinition The field definition
      *
      * @return array<string> Column definitions for CREATE TABLE
+     *
+     * @throws \InvalidArgumentException If any field name is invalid
      */
     protected function buildMainTableColumns(ExtendedBlock $fieldDefinition): array
     {
@@ -296,11 +345,15 @@ class TableSchemaService
                     if ($field instanceof Data && !($field instanceof Localizedfields)) {
                         $columnType = $field->getColumnType();
                         if ($columnType) {
+                            // Validate field name before using it as column name
+                            $fieldName = $field->getName();
+                            IdentifierValidator::validateColumnName($fieldName);
+                            $quotedField = $this->db->quoteIdentifier($fieldName);
                             $columns[] = sprintf(
-                                '`%s` %s COMMENT "%s"',
-                                $field->getName(),
+                                '%s %s COMMENT "%s"',
+                                $quotedField,
                                 $columnType,
-                                addslashes($field->getTitle() ?: $field->getName())
+                                addslashes($field->getTitle() ?: $fieldName)
                             );
                         }
                     }
@@ -324,6 +377,8 @@ class TableSchemaService
      * @param ExtendedBlock $fieldDefinition The field definition
      *
      * @return array<string> Column definitions for CREATE TABLE
+     *
+     * @throws \InvalidArgumentException If any field name is invalid
      */
     protected function buildLocalizedTableColumns(ExtendedBlock $fieldDefinition): array
     {
@@ -341,11 +396,15 @@ class TableSchemaService
                         foreach ($field->getFieldDefinitions() as $localizedField) {
                             $columnType = $localizedField->getColumnType();
                             if ($columnType) {
+                                // Validate field name before using it as column name
+                                $fieldName = $localizedField->getName();
+                                IdentifierValidator::validateColumnName($fieldName);
+                                $quotedField = $this->db->quoteIdentifier($fieldName);
                                 $columns[] = sprintf(
-                                    '`%s` %s COMMENT "%s (localized)"',
-                                    $localizedField->getName(),
+                                    '%s %s COMMENT "%s (localized)"',
+                                    $quotedField,
                                     $columnType,
-                                    addslashes($localizedField->getTitle() ?: $localizedField->getName())
+                                    addslashes($localizedField->getTitle() ?: $fieldName)
                                 );
                             }
                         }
@@ -369,6 +428,8 @@ class TableSchemaService
      * @param ExtendedBlock $fieldDefinition The field definition
      *
      * @return array<string, string> Column names and types
+     *
+     * @throws \InvalidArgumentException If any field name is invalid
      */
     protected function getRequiredColumns(ExtendedBlock $fieldDefinition): array
     {
@@ -386,7 +447,10 @@ class TableSchemaService
                     if ($field instanceof Data && !($field instanceof Localizedfields)) {
                         $columnType = $field->getColumnType();
                         if ($columnType) {
-                            $columns[$field->getName()] = $columnType;
+                            // Validate field name before using it as column name
+                            $fieldName = $field->getName();
+                            IdentifierValidator::validateColumnName($fieldName);
+                            $columns[$fieldName] = $columnType;
                         }
                     }
                 }
@@ -402,6 +466,8 @@ class TableSchemaService
      * @param ExtendedBlock $fieldDefinition The field definition
      *
      * @return array<string, string> Column names and types
+     *
+     * @throws \InvalidArgumentException If any field name is invalid
      */
     protected function getLocalizedRequiredColumns(ExtendedBlock $fieldDefinition): array
     {
@@ -418,7 +484,10 @@ class TableSchemaService
                         foreach ($field->getFieldDefinitions() as $localizedField) {
                             $columnType = $localizedField->getColumnType();
                             if ($columnType) {
-                                $columns[$localizedField->getName()] = $columnType;
+                                // Validate field name before using it as column name
+                                $fieldName = $localizedField->getName();
+                                IdentifierValidator::validateColumnName($fieldName);
+                                $columns[$fieldName] = $columnType;
                             }
                         }
                     }

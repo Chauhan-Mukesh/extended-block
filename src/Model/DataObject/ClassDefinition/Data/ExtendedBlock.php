@@ -14,6 +14,7 @@ namespace ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data;
 
 use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockContainer;
 use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockItem;
+use ExtendedBlockBundle\Service\IdentifierValidator;
 use Pimcore\Db;
 use Pimcore\Logger;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
@@ -301,7 +302,10 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         $db = Db::get();
 
         try {
-            // Check if table exists
+            // Validate table name before using it
+            IdentifierValidator::validateTableName($tableName);
+
+            // Check if table exists (using parameterized query for table name)
             $tableExists = $db->fetchOne(
                 'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
                 [$tableName]
@@ -311,9 +315,12 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                 return $container;
             }
 
+            // Use quoteIdentifier to safely escape the table name
+            $quotedTable = $db->quoteIdentifier($tableName);
+
             // Load items from database
             $rows = $db->fetchAllAssociative(
-                "SELECT * FROM `{$tableName}` WHERE o_id = ? AND fieldname = ? ORDER BY `index` ASC",
+                "SELECT * FROM {$quotedTable} WHERE o_id = ? AND fieldname = ? ORDER BY `index` ASC",
                 [$object->getId(), $this->getName()]
             );
 
@@ -386,7 +393,10 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         $db = Db::get();
 
         try {
-            // Check if localized table exists
+            // Validate table name before using it
+            IdentifierValidator::validateTableName($localizedTableName);
+
+            // Check if localized table exists (using parameterized query for table name)
             $tableExists = $db->fetchOne(
                 'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
                 [$localizedTableName]
@@ -402,9 +412,12 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                 return;
             }
 
+            // Use quoteIdentifier to safely escape the table name
+            $quotedTable = $db->quoteIdentifier($localizedTableName);
+
             $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
             $localizedRows = $db->fetchAllAssociative(
-                "SELECT * FROM `{$localizedTableName}` WHERE ooo_id IN ({$placeholders})",
+                "SELECT * FROM {$quotedTable} WHERE ooo_id IN ({$placeholders})",
                 $itemIds
             );
 
@@ -471,15 +484,21 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         $tableName = $this->getTableName($object->getClassId());
 
         try {
+            // Validate table name before using it
+            IdentifierValidator::validateTableName($tableName);
+
             // Ensure table exists
             $this->ensureTableExists($object->getClassId());
 
             // Begin transaction for data integrity
             $db->beginTransaction();
 
+            // Use quoteIdentifier to safely escape the table name
+            $quotedTable = $db->quoteIdentifier($tableName);
+
             // Delete existing items for this object/field
             $db->executeStatement(
-                "DELETE FROM `{$tableName}` WHERE o_id = ? AND fieldname = ?",
+                "DELETE FROM {$quotedTable} WHERE o_id = ? AND fieldname = ?",
                 [$object->getId(), $this->getName()]
             );
 
@@ -510,7 +529,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      * @param Concrete                  $object    The parent object
      * @param int                       $index     The item index/position
      * @param \Doctrine\DBAL\Connection $db        The database connection
-     * @param string                    $tableName The target table name
+     * @param string                    $tableName The target table name (already validated)
      */
     protected function saveBlockItem(
         ExtendedBlockItem $item,
@@ -538,6 +557,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
             }
         }
 
+        // DBAL's insert method uses parameterized queries, which is safe
         $db->insert($tableName, $data);
         $item->setId((int) $db->lastInsertId());
     }
@@ -553,15 +573,21 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         $localizedTableName = $this->getLocalizedTableName($object->getClassId());
         $db = Db::get();
 
+        // Validate table name before using it
+        IdentifierValidator::validateTableName($localizedTableName);
+
         // Ensure localized table exists
         $this->ensureLocalizedTableExists($object->getClassId());
+
+        // Use quoteIdentifier to safely escape the table name
+        $quotedTable = $db->quoteIdentifier($localizedTableName);
 
         // Delete existing localized data
         $itemIds = array_map(fn ($item) => $item->getId(), $container->getItems());
         if (!empty($itemIds)) {
             $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
             $db->executeStatement(
-                "DELETE FROM `{$localizedTableName}` WHERE ooo_id IN ({$placeholders})",
+                "DELETE FROM {$quotedTable} WHERE ooo_id IN ({$placeholders})",
                 $itemIds
             );
         }
@@ -602,6 +628,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                     }
                 }
 
+                // DBAL's insert method uses parameterized queries, which is safe
                 $db->insert($localizedTableName, $data);
             }
         }
@@ -621,7 +648,10 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         $tableName = $this->getTableName($object->getClassId());
 
         try {
-            // Check if table exists before deleting
+            // Validate table name before using it
+            IdentifierValidator::validateTableName($tableName);
+
+            // Check if table exists before deleting (parameterized query)
             $tableExists = $db->fetchOne(
                 'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
                 [$tableName]
@@ -631,24 +661,30 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                 return;
             }
 
+            // Use quoteIdentifier to safely escape the table name
+            $quotedTable = $db->quoteIdentifier($tableName);
+
             // Get item IDs for localized data deletion
             $itemIds = $db->fetchFirstColumn(
-                "SELECT id FROM `{$tableName}` WHERE o_id = ? AND fieldname = ?",
+                "SELECT id FROM {$quotedTable} WHERE o_id = ? AND fieldname = ?",
                 [$object->getId(), $this->getName()]
             );
 
             // Delete localized data first
             if (!empty($itemIds) && $this->hasLocalizedFields()) {
                 $localizedTableName = $this->getLocalizedTableName($object->getClassId());
+                IdentifierValidator::validateTableName($localizedTableName);
+
                 $localizedTableExists = $db->fetchOne(
                     'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
                     [$localizedTableName]
                 );
 
                 if ($localizedTableExists) {
+                    $quotedLocalizedTable = $db->quoteIdentifier($localizedTableName);
                     $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
                     $db->executeStatement(
-                        "DELETE FROM `{$localizedTableName}` WHERE ooo_id IN ({$placeholders})",
+                        "DELETE FROM {$quotedLocalizedTable} WHERE ooo_id IN ({$placeholders})",
                         $itemIds
                     );
                 }
@@ -656,7 +692,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
 
             // Delete main items
             $db->executeStatement(
-                "DELETE FROM `{$tableName}` WHERE o_id = ? AND fieldname = ?",
+                "DELETE FROM {$quotedTable} WHERE o_id = ? AND fieldname = ?",
                 [$object->getId(), $this->getName()]
             );
         } catch (\Exception $e) {
@@ -669,11 +705,21 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      *
      * @param string $classId The class ID
      *
-     * @return string The table name
+     * @return string The validated table name
+     *
+     * @throws \InvalidArgumentException If classId is invalid
      */
     public function getTableName(string $classId): string
     {
-        return $this->tablePrefix.$classId.'_'.$this->getName();
+        // Validate classId before constructing the table name
+        IdentifierValidator::validateClassId($classId);
+
+        $tableName = $this->tablePrefix.$classId.'_'.$this->getName();
+
+        // Validate the full table name as well
+        IdentifierValidator::validateTableName($tableName);
+
+        return $tableName;
     }
 
     /**
@@ -681,11 +727,18 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      *
      * @param string $classId The class ID
      *
-     * @return string The localized table name
+     * @return string The validated localized table name
+     *
+     * @throws \InvalidArgumentException If classId is invalid
      */
     public function getLocalizedTableName(string $classId): string
     {
-        return $this->getTableName($classId).'_localized';
+        $tableName = $this->getTableName($classId).'_localized';
+
+        // Validate the full localized table name
+        IdentifierValidator::validateTableName($tableName);
+
+        return $tableName;
     }
 
     /**
@@ -701,7 +754,10 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         $tableName = $this->getTableName($classId);
         $db = Db::get();
 
-        // Check if table already exists
+        // Validate table name before using it
+        IdentifierValidator::validateTableName($tableName);
+
+        // Check if table already exists (parameterized query)
         $tableExists = $db->fetchOne(
             'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
             [$tableName]
@@ -710,6 +766,9 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         if ($tableExists) {
             return;
         }
+
+        // Use quoteIdentifier to safely escape the table name
+        $quotedTable = $db->quoteIdentifier($tableName);
 
         // Build CREATE TABLE statement
         $columns = [
@@ -727,7 +786,11 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                     if ($fieldDef instanceof Data && !($fieldDef instanceof Localizedfields)) {
                         $columnType = $fieldDef->getColumnType();
                         if ($columnType) {
-                            $columns[] = "`{$fieldDef->getName()}` {$columnType}";
+                            // Validate field name before using it as column name
+                            $fieldName = $fieldDef->getName();
+                            IdentifierValidator::validateColumnName($fieldName);
+                            $quotedColumn = $db->quoteIdentifier($fieldName);
+                            $columns[] = "{$quotedColumn} {$columnType}";
                         }
                     }
                 }
@@ -739,7 +802,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         $columns[] = 'INDEX `fieldname` (`fieldname`)';
         $columns[] = 'INDEX `type` (`type`)';
 
-        $sql = "CREATE TABLE `{$tableName}` (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         $db->executeStatement($sql);
     }
@@ -757,7 +820,10 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         $tableName = $this->getLocalizedTableName($classId);
         $db = Db::get();
 
-        // Check if table already exists
+        // Validate table name before using it
+        IdentifierValidator::validateTableName($tableName);
+
+        // Check if table already exists (parameterized query)
         $tableExists = $db->fetchOne(
             'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
             [$tableName]
@@ -766,6 +832,9 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         if ($tableExists) {
             return;
         }
+
+        // Use quoteIdentifier to safely escape the table name
+        $quotedTable = $db->quoteIdentifier($tableName);
 
         // Build CREATE TABLE statement
         $columns = [
@@ -782,7 +851,11 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                         foreach ($fieldDef->getFieldDefinitions() as $localizedFieldDef) {
                             $columnType = $localizedFieldDef->getColumnType();
                             if ($columnType) {
-                                $columns[] = "`{$localizedFieldDef->getName()}` {$columnType}";
+                                // Validate field name before using it as column name
+                                $fieldName = $localizedFieldDef->getName();
+                                IdentifierValidator::validateColumnName($fieldName);
+                                $quotedColumn = $db->quoteIdentifier($fieldName);
+                                $columns[] = "{$quotedColumn} {$columnType}";
                             }
                         }
                     }
@@ -795,7 +868,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         $columns[] = 'INDEX `language` (`language`)';
         $columns[] = 'UNIQUE KEY `ooo_id_language` (`ooo_id`, `language`)';
 
-        $sql = "CREATE TABLE `{$tableName}` (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         $db->executeStatement($sql);
     }
