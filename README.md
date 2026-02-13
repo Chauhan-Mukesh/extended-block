@@ -638,7 +638,37 @@ composer require chauhan-mukesh/extended-block-bundle:dev-main
 
 ### Stability Issues
 
-If you get stability-related errors, add the following to your `composer.json`:
+If you get stability-related errors like:
+
+```
+Could not find a version of package chauhan-mukesh/extended-block-bundle matching your minimum-stability (stable).
+```
+
+This occurs when there are no tagged releases. Choose one of these solutions:
+
+**Option 1: Use the dev version with explicit stability**
+
+```bash
+composer require chauhan-mukesh/extended-block-bundle:dev-main
+```
+
+Or with explicit stability flag:
+
+```bash
+composer require chauhan-mukesh/extended-block-bundle:dev-main@dev
+```
+
+**Option 2: Use the branch alias version**
+
+The package provides a branch alias that maps `dev-main` to `1.0.x-dev`:
+
+```bash
+composer require chauhan-mukesh/extended-block-bundle:1.0.x-dev
+```
+
+**Option 3: Lower your project's minimum stability**
+
+Add the following to your `composer.json`:
 
 ```json
 {
@@ -647,11 +677,27 @@ If you get stability-related errors, add the following to your `composer.json`:
 }
 ```
 
-Or specify the stability when requiring:
+### For Package Maintainers: Creating Stable Releases
+
+To make the package installable with stable minimum-stability, create a git tag:
 
 ```bash
-composer require chauhan-mukesh/extended-block-bundle:dev-main@dev
+# Create a signed annotated tag (recommended)
+git tag -a v1.0.0 -m "Release version 1.0.0"
+
+# Push the tag to GitHub
+git push origin v1.0.0
 ```
+
+After pushing the tag, users can then install with:
+
+```bash
+composer require chauhan-mukesh/extended-block-bundle
+# or with specific version constraint
+composer require chauhan-mukesh/extended-block-bundle:^1.0
+```
+
+> **Note:** The above commands only work after a stable version tag (e.g., `v1.0.0`) has been created and pushed to the repository.
 
 ## 🤝 Contributing
 

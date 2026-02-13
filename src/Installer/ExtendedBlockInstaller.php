@@ -13,9 +13,7 @@ declare(strict_types=1);
 namespace ExtendedBlockBundle\Installer;
 
 use Doctrine\DBAL\Connection;
-use Pimcore\Extension\Bundle\Installer\InstallerInterface;
-use Pimcore\Extension\Bundle\Installer\OutputWriter;
-use Pimcore\Extension\Bundle\Installer\OutputWriterInterface;
+use Pimcore\Extension\Bundle\Installer\AbstractInstaller;
 
 /**
  * Installer for Extended Block Bundle.
@@ -28,17 +26,12 @@ use Pimcore\Extension\Bundle\Installer\OutputWriterInterface;
  *
  * @see https://pimcore.com/docs/platform/Bundles/Bundle_Installation.html
  */
-class ExtendedBlockInstaller implements InstallerInterface
+class ExtendedBlockInstaller extends AbstractInstaller
 {
     /**
      * Database connection.
      */
     protected Connection $db;
-
-    /**
-     * Output writer for installation messages.
-     */
-    protected OutputWriterInterface $outputWriter;
 
     /**
      * Path to the bundle.
@@ -62,19 +55,9 @@ class ExtendedBlockInstaller implements InstallerInterface
      */
     public function __construct(Connection $db)
     {
+        parent::__construct();
         $this->db = $db;
-        $this->outputWriter = new OutputWriter();
         $this->bundlePath = dirname(__DIR__, 2);
-    }
-
-    /**
-     * Sets the output writer for installation messages.
-     *
-     * @param OutputWriterInterface $outputWriter The output writer
-     */
-    public function setOutputWriter(OutputWriterInterface $outputWriter): void
-    {
-        $this->outputWriter = $outputWriter;
     }
 
     /**
@@ -87,7 +70,7 @@ class ExtendedBlockInstaller implements InstallerInterface
      */
     public function install(): void
     {
-        $this->outputWriter->write('Installing Extended Block Bundle...');
+        $this->output->writeln('Installing Extended Block Bundle...');
 
         try {
             // Create metadata table
@@ -109,9 +92,9 @@ class ExtendedBlockInstaller implements InstallerInterface
                 ['installed_at', date('Y-m-d H:i:s')]
             );
 
-            $this->outputWriter->write('Extended Block Bundle installed successfully!');
+            $this->output->writeln('Extended Block Bundle installed successfully!');
         } catch (\Exception $e) {
-            $this->outputWriter->write('Error installing bundle: '.$e->getMessage());
+            $this->output->writeln('Error installing bundle: '.$e->getMessage());
             throw $e;
         }
     }
@@ -125,7 +108,7 @@ class ExtendedBlockInstaller implements InstallerInterface
      */
     public function update(): void
     {
-        $this->outputWriter->write('Updating Extended Block Bundle...');
+        $this->output->writeln('Updating Extended Block Bundle...');
 
         try {
             // Get current installed version
@@ -149,9 +132,9 @@ class ExtendedBlockInstaller implements InstallerInterface
                 ['updated_at', date('Y-m-d H:i:s')]
             );
 
-            $this->outputWriter->write('Extended Block Bundle updated successfully!');
+            $this->output->writeln('Extended Block Bundle updated successfully!');
         } catch (\Exception $e) {
-            $this->outputWriter->write('Error updating bundle: '.$e->getMessage());
+            $this->output->writeln('Error updating bundle: '.$e->getMessage());
             throw $e;
         }
     }
@@ -169,8 +152,8 @@ class ExtendedBlockInstaller implements InstallerInterface
      */
     public function uninstall(): void
     {
-        $this->outputWriter->write('Uninstalling Extended Block Bundle...');
-        $this->outputWriter->write('Note: Extended block data tables are preserved. Use console command to remove them manually.');
+        $this->output->writeln('Uninstalling Extended Block Bundle...');
+        $this->output->writeln('Note: Extended block data tables are preserved. Use console command to remove them manually.');
 
         try {
             // Use quoteIdentifier for consistent security practice
@@ -179,9 +162,9 @@ class ExtendedBlockInstaller implements InstallerInterface
             // Remove metadata table
             $this->db->executeStatement("DROP TABLE IF EXISTS {$quotedTable}");
 
-            $this->outputWriter->write('Extended Block Bundle uninstalled successfully!');
+            $this->output->writeln('Extended Block Bundle uninstalled successfully!');
         } catch (\Exception $e) {
-            $this->outputWriter->write('Error uninstalling bundle: '.$e->getMessage());
+            $this->output->writeln('Error uninstalling bundle: '.$e->getMessage());
             throw $e;
         }
     }
@@ -322,7 +305,7 @@ class ExtendedBlockInstaller implements InstallerInterface
         foreach ($migrations as $migrationVersion => $migration) {
             if (version_compare($migrationVersion, $fromVersion, '>')
                 && version_compare($migrationVersion, $toVersion, '<=')) {
-                $this->outputWriter->write("Running migration for version {$migrationVersion}...");
+                $this->output->writeln("Running migration for version {$migrationVersion}...");
                 $migration();
             }
         }
@@ -346,12 +329,12 @@ class ExtendedBlockInstaller implements InstallerInterface
     }
 
     /**
-     * Returns the output writer.
+     * Determines if admin interface should be reloaded after installation/uninstallation.
      *
-     * @return OutputWriterInterface The output writer
+     * @return bool True if admin should reload
      */
-    public function getOutputWriter(): OutputWriterInterface
+    public function needsReloadAfterInstall(): bool
     {
-        return $this->outputWriter;
+        return true;
     }
 }
