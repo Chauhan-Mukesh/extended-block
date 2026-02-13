@@ -14,6 +14,7 @@ A Pimcore bundle that extends the block data type by storing data in separate da
 - [Installation](#-installation)
 - [Configuration](#-configuration)
 - [Usage](#-usage)
+- [PHP API](#-php-api)
 - [Architecture](#-architecture)
 - [Database Schema](#-database-schema)
 - [Localized Fields](#-localized-fields)
@@ -21,6 +22,7 @@ A Pimcore bundle that extends the block data type by storing data in separate da
 - [Testing](#-testing)
 - [Contributing](#-contributing)
 - [License](#-license)
+- [Documentation](#-documentation)
 
 ## ✨ Features
 
@@ -197,6 +199,112 @@ if (isset($item->title)) {
     // ...
 }
 ```
+
+## 🔧 PHP API
+
+The Extended Block bundle provides a PHP API that works similarly to Pimcore's standard Block data type. For comprehensive documentation, see [doc/PHP_API.md](doc/PHP_API.md).
+
+### Quick Start
+
+```php
+<?php
+
+use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockContainer;
+use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockItem;
+use Pimcore\Model\DataObject\Product;
+
+// Get an object with an extended block field
+$product = Product::getById(123);
+
+// Access the extended block container
+$container = $product->getContentBlocks();
+
+// Create and add a new block item
+$item = new ExtendedBlockItem('text_block', 0);
+$item->setFieldValue('title', 'Product Features');
+$item->setFieldValue('content', '<p>Amazing features...</p>');
+
+// Set localized content
+$item->setLocalizedValue('en', 'headline', 'Features');
+$item->setLocalizedValue('de', 'headline', 'Eigenschaften');
+
+$container->addItem($item);
+$product->save();
+```
+
+### Key Classes
+
+| Class | Namespace | Description |
+|-------|-----------|-------------|
+| `ExtendedBlockContainer` | `ExtendedBlockBundle\Model\DataObject\Data` | Container for block items with iteration and array access support |
+| `ExtendedBlockItem` | `ExtendedBlockBundle\Model\DataObject\Data` | Individual block item with field values and localized data |
+
+### Common Operations
+
+#### Reading Block Data
+
+```php
+$container = $product->getContentBlocks();
+
+// Iterate through items
+foreach ($container as $item) {
+    echo $item->getType();                    // Block type
+    echo $item->getFieldValue('title');       // Field value
+    echo $item->getLocalizedValue('en', 'headline'); // Localized value
+}
+
+// Access specific items
+$first = $container->first();
+$last = $container->last();
+$byIndex = $container->getItem(2);
+
+// Filter by type
+$textBlocks = $container->getItemsByType('text_block');
+```
+
+#### Creating and Modifying Blocks
+
+```php
+// Create new item
+$item = new ExtendedBlockItem('image_block', 0);
+$item->setFieldValue('image', $assetId);
+$item->setFieldValue('caption', 'Product Image');
+
+// Using magic methods
+$item->title = 'My Title';
+echo $item->title;
+
+// Add to container
+$container->addItem($item);
+
+// Modify existing item
+$firstItem = $container->first();
+$firstItem->setFieldValue('title', 'Updated Title');
+
+// Remove and reorder
+$container->removeItem(0);
+$container->moveItem(0, 2);
+```
+
+#### Direct Database Queries
+
+Since data is stored in separate tables, you can query directly:
+
+```php
+use Pimcore\Db;
+
+$db = Db::get();
+$classId = Product::classId();
+$tableName = 'object_eb_' . $classId . '_contentBlocks';
+
+// Find objects with specific content
+$objectIds = $db->fetchFirstColumn(
+    "SELECT DISTINCT o_id FROM `{$tableName}` WHERE title LIKE ?",
+    ['%promotion%']
+);
+```
+
+For more detailed examples including CRUD operations, localized fields, working with multiple block types, and best practices, see the [PHP API Documentation](doc/PHP_API.md).
 
 ## 🏗️ Architecture
 
@@ -410,6 +518,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Pimcore](https://pimcore.com/) for the amazing platform
 - [Symfony](https://symfony.com/) for the robust framework
 - All contributors who help improve this bundle
+
+## 📖 Documentation
+
+For more detailed documentation, refer to the following resources:
+
+| Document | Description |
+|----------|-------------|
+| [PHP API Reference](doc/PHP_API.md) | Comprehensive guide for working with Extended Block through PHP API |
+| [README.md](README.md) | This file - overview and quick start guide |
+
+### Additional Resources
+
+- [Pimcore Data Objects Documentation](https://pimcore.com/docs/platform/Pimcore/DataObjects/)
+- [Pimcore Block Data Type](https://pimcore.com/docs/platform/Pimcore/Documents/Editables/Block/)
 
 ---
 
