@@ -38,15 +38,39 @@
 # PHPUnit
 /app/phpunit.xml
 /phpunit.xml
+.phpunit.cache/
+.phpunit.result.cache
 
 # Build data
 /build/
 
 # Composer PHAR
 /composer.phar
+composer.lock
 
 # Backup entities generated with doctrine:generate:entities command
 **/Entity/*~
 
 # Embedded web-server pid file
 /.web-server-pid
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# PHP CS Fixer
+.php-cs-fixer.cache
+.php_cs.cache
+
+# Coverage reports
+coverage/
+.coverage
+
+# OS files
+.DS_Store
+Thumbs.db

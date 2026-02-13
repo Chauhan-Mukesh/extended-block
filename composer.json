@@ -1,0 +1,64 @@
+{
+    "name": "chauhan-mukesh/extended-block-bundle",
+    "description": "Pimcore bundle that extends block data type with separate table storage for better performance and queryability",
+    "keywords": [
+        "pimcore",
+        "pimcore-bundle",
+        "block",
+        "extended-block",
+        "data-type",
+        "field-collection",
+        "localized-fields"
+    ],
+    "homepage": "https://github.com/Chauhan-Mukesh/extended-block",
+    "type": "pimcore-bundle",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Chauhan Mukesh",
+            "email": "mukesh@example.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=8.1",
+        "pimcore/pimcore": "^11.0"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^1.10",
+        "friendsofphp/php-cs-fixer": "^3.0",
+        "phpunit/phpunit": "^10.0",
+        "symfony/phpunit-bridge": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "ExtendedBlockBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ExtendedBlockBundle\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "phpstan": "phpstan analyse src --level=6",
+        "cs-fix": "php-cs-fixer fix src --rules=@Symfony",
+        "cs-check": "php-cs-fixer fix src --rules=@Symfony --dry-run --diff",
+        "test": "phpunit"
+    },
+    "extra": {
+        "pimcore": {
+            "bundles": [
+                "ExtendedBlockBundle\\ExtendedBlockBundle"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pimcore/pimcore-cli": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

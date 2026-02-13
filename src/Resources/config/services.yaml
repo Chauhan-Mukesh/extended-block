@@ -1,0 +1,36 @@
+# Extended Block Bundle - Service Configuration
+#
+# This file defines all services for the Extended Block Bundle.
+#
+# @package    ExtendedBlockBundle
+# @author     Chauhan Mukesh
+# @copyright  Copyright (c) 2026 Chauhan Mukesh
+# @license    MIT License
+
+services:
+    # Default configuration for services
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    # Installer service
+    ExtendedBlockBundle\Installer\ExtendedBlockInstaller:
+        arguments:
+            $db: '@doctrine.dbal.default_connection'
+        public: true
+
+    # Table schema service
+    ExtendedBlockBundle\Service\TableSchemaService:
+        arguments:
+            $tablePrefix: '%extended_block.table_prefix%'
+        public: true
+
+    # Event listeners
+    ExtendedBlockBundle\EventListener\ClassDefinitionListener:
+        arguments:
+            $tableSchemaService: '@ExtendedBlockBundle\Service\TableSchemaService'
+        tags:
+            - { name: kernel.event_listener, event: pimcore.class.preUpdate, method: onPreSave }
+            - { name: kernel.event_listener, event: pimcore.class.postUpdate, method: onPostSave }
+            - { name: kernel.event_listener, event: pimcore.class.preDelete, method: onPreDelete }
