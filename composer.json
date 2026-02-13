@@ -47,6 +47,9 @@
         "test": "phpunit"
     },
     "extra": {
+        "branch-alias": {
+            "dev-main": "1.0.x-dev"
+        },
         "pimcore": {
             "bundles": [
                 "ExtendedBlockBundle\\ExtendedBlockBundle"
