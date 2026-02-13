@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle - Extended Block Item
+ * Extended Block Bundle - Extended Block Item.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
@@ -38,7 +37,7 @@ use Pimcore\Model\DataObject\Concrete;
  * $item->setLocalizedValue('de', 'title', 'Hallo');
  * ```
  *
- * @see \ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockContainer
+ * @see ExtendedBlockContainer
  */
 class ExtendedBlockItem
 {
@@ -46,8 +45,6 @@ class ExtendedBlockItem
      * Database ID for this item.
      *
      * This is set after the item is saved to the database.
-     *
-     * @var int|null
      */
     protected ?int $id = null;
 
@@ -56,8 +53,6 @@ class ExtendedBlockItem
      *
      * Corresponds to the block type defined in the ExtendedBlock definition.
      * E.g., 'text_block', 'image_block', 'video_block'
-     *
-     * @var string
      */
     protected string $type = 'default';
 
@@ -65,22 +60,16 @@ class ExtendedBlockItem
      * Position index within the container.
      *
      * Used for ordering block items. Index starts at 0.
-     *
-     * @var int
      */
     protected int $index = 0;
 
     /**
      * Reference to the parent object.
-     *
-     * @var Concrete|null
      */
     protected ?Concrete $object = null;
 
     /**
      * Field name of the extended block in the parent object.
-     *
-     * @var string
      */
     protected string $fieldname = '';
 
@@ -104,8 +93,6 @@ class ExtendedBlockItem
 
     /**
      * Marks this item as modified and needing save.
-     *
-     * @var bool
      */
     protected bool $modified = false;
 
@@ -121,7 +108,7 @@ class ExtendedBlockItem
         string $type = 'default',
         int $index = 0,
         ?Concrete $object = null,
-        string $fieldname = ''
+        string $fieldname = '',
     ) {
         $this->type = $type;
         $this->index = $index;
@@ -146,13 +133,12 @@ class ExtendedBlockItem
      *
      * @param string $name  The field name
      * @param mixed  $value The value to set
-     *
-     * @return static
      */
     public function setFieldValue(string $name, mixed $value): static
     {
         $this->fieldValues[$name] = $value;
         $this->modified = true;
+
         return $this;
     }
 
@@ -172,13 +158,12 @@ class ExtendedBlockItem
      * Removes a field value.
      *
      * @param string $name The field name
-     *
-     * @return static
      */
     public function removeFieldValue(string $name): static
     {
         unset($this->fieldValues[$name]);
         $this->modified = true;
+
         return $this;
     }
 
@@ -211,8 +196,6 @@ class ExtendedBlockItem
      * @param string $language The language code
      * @param string $name     The field name
      * @param mixed  $value    The value to set
-     *
-     * @return static
      */
     public function setLocalizedValue(string $language, string $name, mixed $value): static
     {
@@ -222,6 +205,7 @@ class ExtendedBlockItem
 
         $this->localizedData[$language][$name] = $value;
         $this->modified = true;
+
         return $this;
     }
 
@@ -251,13 +235,12 @@ class ExtendedBlockItem
      * Sets all localized data.
      *
      * @param array<string, array<string, mixed>> $data The localized data
-     *
-     * @return static
      */
     public function setLocalizedData(array $data): static
     {
         $this->localizedData = $data;
         $this->modified = true;
+
         return $this;
     }
 
@@ -275,7 +258,7 @@ class ExtendedBlockItem
             return false;
         }
 
-        if ($name !== null) {
+        if (null !== $name) {
             return array_key_exists($name, $this->localizedData[$language]);
         }
 
@@ -286,13 +269,12 @@ class ExtendedBlockItem
      * Clears all localized data for a language.
      *
      * @param string $language The language code
-     *
-     * @return static
      */
     public function clearLocalizedData(string $language): static
     {
         unset($this->localizedData[$language]);
         $this->modified = true;
+
         return $this;
     }
 
@@ -323,8 +305,6 @@ class ExtendedBlockItem
      *
      * @param string $name  The field name
      * @param mixed  $value The value
-     *
-     * @return void
      */
     public function __set(string $name, mixed $value): void
     {
@@ -347,8 +327,6 @@ class ExtendedBlockItem
      * Magic unset for field values.
      *
      * @param string $name The field name
-     *
-     * @return void
      */
     public function __unset(string $name): void
     {
@@ -410,112 +388,76 @@ class ExtendedBlockItem
 
     // Getters and Setters
 
-    /**
-     * @return int|null
-     */
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    /**
-     * @param int|null $id
-     * @return static
-     */
     public function setId(?int $id): static
     {
         $this->id = $id;
+
         return $this;
     }
 
-    /**
-     * @return string
-     */
     public function getType(): string
     {
         return $this->type;
     }
 
-    /**
-     * @param string $type
-     * @return static
-     */
     public function setType(string $type): static
     {
         $this->type = $type;
         $this->modified = true;
+
         return $this;
     }
 
-    /**
-     * @return int
-     */
     public function getIndex(): int
     {
         return $this->index;
     }
 
-    /**
-     * @param int $index
-     * @return static
-     */
     public function setIndex(int $index): static
     {
         $this->index = $index;
+
         return $this;
     }
 
-    /**
-     * @return Concrete|null
-     */
     public function getObject(): ?Concrete
     {
         return $this->object;
     }
 
-    /**
-     * @param Concrete|null $object
-     * @return static
-     */
     public function setObject(?Concrete $object): static
     {
         $this->object = $object;
+
         return $this;
     }
 
-    /**
-     * @return string
-     */
     public function getFieldname(): string
     {
         return $this->fieldname;
     }
 
-    /**
-     * @param string $fieldname
-     * @return static
-     */
     public function setFieldname(string $fieldname): static
     {
         $this->fieldname = $fieldname;
+
         return $this;
     }
 
-    /**
-     * @return bool
-     */
     public function isModified(): bool
     {
         return $this->modified;
     }
 
-    /**
-     * @param bool $modified
-     * @return static
-     */
     public function setModified(bool $modified): static
     {
         $this->modified = $modified;
+
         return $this;
     }
 }

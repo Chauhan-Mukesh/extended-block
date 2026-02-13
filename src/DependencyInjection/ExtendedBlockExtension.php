@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle - Dependency Injection Extension
+ * Extended Block Bundle - Dependency Injection Extension.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
@@ -36,8 +35,6 @@ class ExtendedBlockExtension extends Extension
      *
      * @param array<string, mixed> $configs   The bundle configuration
      * @param ContainerBuilder     $container The container builder
-     *
-     * @return void
      */
     public function load(array $configs, ContainerBuilder $container): void
     {
@@ -53,7 +50,7 @@ class ExtendedBlockExtension extends Extension
         // Load service definitions from YAML configuration
         $loader = new YamlFileLoader(
             $container,
-            new FileLocator(__DIR__ . '/../Resources/config')
+            new FileLocator(__DIR__.'/../Resources/config')
         );
 
         // Load all service configuration files

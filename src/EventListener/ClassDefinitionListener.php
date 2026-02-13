@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle - Class Definition Event Listener
+ * Extended Block Bundle - Class Definition Event Listener.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
@@ -13,12 +12,13 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\EventListener;
 
-use Pimcore\Event\Model\DataObject\ClassDefinitionEvent;
-use Pimcore\Model\DataObject\ClassDefinition;
-use Pimcore\Model\DataObject\ClassDefinition\Data\Localizedfields;
 use ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock;
 use ExtendedBlockBundle\Service\TableSchemaService;
+use Pimcore\Event\Model\DataObject\ClassDefinitionEvent;
 use Pimcore\Logger;
+use Pimcore\Model\DataObject\ClassDefinition;
+use Pimcore\Model\DataObject\ClassDefinition\Data\Block;
+use Pimcore\Model\DataObject\ClassDefinition\Data\Localizedfields;
 
 /**
  * Listener for class definition events.
@@ -34,8 +34,6 @@ class ClassDefinitionListener
 {
     /**
      * Service for managing table schemas.
-     *
-     * @var TableSchemaService
      */
     protected TableSchemaService $tableSchemaService;
 
@@ -58,8 +56,6 @@ class ClassDefinitionListener
      *
      * @param ClassDefinitionEvent $event The event
      *
-     * @return void
-     *
      * @throws \Exception If validation fails
      */
     public function onPreSave(ClassDefinitionEvent $event): void
@@ -74,7 +70,7 @@ class ClassDefinitionListener
             $this->validateExtendedBlockField($fieldInfo['field'], $fieldInfo['context']);
         }
 
-        Logger::debug('ExtendedBlock: Pre-save validation completed for class ' . $classDefinition->getName());
+        Logger::debug('ExtendedBlock: Pre-save validation completed for class '.$classDefinition->getName());
     }
 
     /**
@@ -83,8 +79,6 @@ class ClassDefinitionListener
      * Creates or updates database tables for extended block fields.
      *
      * @param ClassDefinitionEvent $event The event
-     *
-     * @return void
      */
     public function onPostSave(ClassDefinitionEvent $event): void
     {
@@ -123,8 +117,6 @@ class ClassDefinitionListener
      * Tables should be dropped manually using the admin interface.
      *
      * @param ClassDefinitionEvent $event The event
-     *
-     * @return void
      */
     public function onPreDelete(ClassDefinitionEvent $event): void
     {
@@ -135,7 +127,7 @@ class ClassDefinitionListener
 
         if (!empty($extendedBlockFields)) {
             Logger::warning(sprintf(
-                'ExtendedBlock: Class %s is being deleted but has %d extended block field(s). ' .
+                'ExtendedBlock: Class %s is being deleted but has %d extended block field(s). '.
                 'Database tables will be preserved. Use admin tools to remove them manually.',
                 $classDefinition->getName(),
                 count($extendedBlockFields)
@@ -170,10 +162,41 @@ class ClassDefinitionListener
                         ];
                     }
                 }
+            } elseif ($fieldDefinition instanceof Block) {
+                // Check inside Block fields - ExtendedBlock inside Block is not allowed
+                $this->checkForExtendedBlockInBlock($fieldDefinition);
             }
         }
 
         return $fields;
+    }
+
+    /**
+     * Checks if a Block field contains ExtendedBlock, which is not allowed.
+     *
+     * @param Block $blockField The Block field to check
+     *
+     * @throws \Exception If ExtendedBlock is found inside Block
+     */
+    protected function checkForExtendedBlockInBlock(Block $blockField): void
+    {
+        $blockName = $blockField->getName();
+        $fieldDefinitions = $blockField->getFieldDefinitions();
+
+        foreach ($fieldDefinitions as $field) {
+            if ($field instanceof ExtendedBlock) {
+                throw new \Exception(sprintf('ExtendedBlock field "%s" cannot be placed inside Block field "%s". Nesting ExtendedBlock inside Block is not supported.', $field->getName(), $blockName));
+            }
+
+            // Also check inside LocalizedFields within Block
+            if ($field instanceof Localizedfields) {
+                foreach ($field->getFieldDefinitions() as $localizedField) {
+                    if ($localizedField instanceof ExtendedBlock) {
+                        throw new \Exception(sprintf('ExtendedBlock field "%s" cannot be placed inside LocalizedFields within Block field "%s". Nesting ExtendedBlock inside Block is not supported.', $localizedField->getName(), $blockName));
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -182,21 +205,13 @@ class ClassDefinitionListener
      * @param ExtendedBlock $field   The field to validate
      * @param string        $context The context ('root' or 'localizedfields')
      *
-     * @return void
-     *
      * @throws \Exception If validation fails
      */
     protected function validateExtendedBlockField(ExtendedBlock $field, string $context): void
     {
         // Check if ExtendedBlock with LocalizedFields is placed inside LocalizedFields
-        if ($context === 'localizedfields' && $field->hasLocalizedFields()) {
-            throw new \Exception(sprintf(
-                'ExtendedBlock field "%s" contains LocalizedFields and cannot be placed ' .
-                'inside a LocalizedFields container. This would create infinite recursion. ' .
-                'Either remove the LocalizedFields from the ExtendedBlock definition, ' .
-                'or move the ExtendedBlock outside of LocalizedFields.',
-                $field->getName()
-            ));
+        if ('localizedfields' === $context && $field->hasLocalizedFields()) {
+            throw new \Exception(sprintf('ExtendedBlock field "%s" contains LocalizedFields and cannot be placed inside a LocalizedFields container. This would create infinite recursion. Either remove the LocalizedFields from the ExtendedBlock definition, or move the ExtendedBlock outside of LocalizedFields.', $field->getName()));
         }
 
         // Validate block definitions

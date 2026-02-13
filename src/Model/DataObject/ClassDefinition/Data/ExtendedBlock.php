@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle - ExtendedBlock Data Type Definition
+ * Extended Block Bundle - ExtendedBlock Data Type Definition.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
@@ -13,16 +12,15 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data;
 
+use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockContainer;
+use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockItem;
+use Pimcore\Db;
+use Pimcore\Logger;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
+use Pimcore\Model\DataObject\ClassDefinition\Data\Block;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Localizedfields;
 use Pimcore\Model\DataObject\ClassDefinition\Layout;
 use Pimcore\Model\DataObject\Concrete;
-use Pimcore\Model\DataObject;
-use Pimcore\Db;
-use Pimcore\Logger;
-use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockItem;
-use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockContainer;
-use ExtendedBlockBundle\Service\TableSchemaService;
 
 /**
  * Extended Block Data Type Definition.
@@ -51,17 +49,12 @@ use ExtendedBlockBundle\Service\TableSchemaService;
  *   - language
  *   - ... (localized field columns)
  *
- * @see \Pimcore\Model\DataObject\ClassDefinition\Data
+ * @see Data
  */
-class ExtendedBlock extends Data implements
-    Data\QueryResourcePersistenceAwareInterface,
-    Data\LayoutDefinitionEnrichmentInterface,
-    Data\VarExporterInterface
+class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareInterface, Data\LayoutDefinitionEnrichmentInterface, Data\VarExporterInterface
 {
     /**
      * Data type identifier for Pimcore.
-     *
-     * @var string
      */
     public string $fieldtype = 'extendedBlock';
 
@@ -98,8 +91,6 @@ class ExtendedBlock extends Data implements
      *
      * When enabled, block items can contain LocalizedFields, and separate
      * localized tables will be created to store translations.
-     *
-     * @var bool
      */
     public bool $allowLocalizedFields = true;
 
@@ -107,29 +98,21 @@ class ExtendedBlock extends Data implements
      * Maximum number of block items allowed.
      *
      * Null means unlimited items are allowed.
-     *
-     * @var int|null
      */
     public ?int $maxItems = null;
 
     /**
      * Minimum number of block items required.
-     *
-     * @var int
      */
     public int $minItems = 0;
 
     /**
      * Whether block items can be collapsed in the admin UI.
-     *
-     * @var bool
      */
     public bool $collapsible = true;
 
     /**
      * Whether block items should be collapsed by default.
-     *
-     * @var bool
      */
     public bool $collapsed = false;
 
@@ -138,8 +121,6 @@ class ExtendedBlock extends Data implements
      *
      * When enabled, block items are only loaded when accessed,
      * improving performance for objects with many blocks.
-     *
-     * @var bool
      */
     public bool $lazyLoading = true;
 
@@ -148,15 +129,11 @@ class ExtendedBlock extends Data implements
      *
      * ExtendedBlock with localized fields cannot be nested inside
      * another LocalizedFields container to prevent infinite recursion.
-     *
-     * @var bool
      */
     public bool $disallowAddingInLocalizedField = false;
 
     /**
      * Database table prefix for this extended block.
-     *
-     * @var string
      */
     protected string $tablePrefix = 'object_eb_';
 
@@ -168,6 +145,36 @@ class ExtendedBlock extends Data implements
     public function getTypeName(): string
     {
         return 'Extended Block';
+    }
+
+    /**
+     * Returns the field type identifier.
+     *
+     * @return string The field type
+     */
+    public function getFieldType(): string
+    {
+        return 'extendedBlock';
+    }
+
+    /**
+     * Returns the PHPDoc type hint for input values.
+     *
+     * @return string|null The input type
+     */
+    public function getPhpdocInputType(): ?string
+    {
+        return '\\'.ExtendedBlockContainer::class.'|null';
+    }
+
+    /**
+     * Returns the PHPDoc type hint for return values.
+     *
+     * @return string|null The return type
+     */
+    public function getPhpdocReturnType(): ?string
+    {
+        return '\\'.ExtendedBlockContainer::class.'|null';
     }
 
     /**
@@ -186,9 +193,27 @@ class ExtendedBlock extends Data implements
     /**
      * Returns the query column type for listing queries.
      *
-     * @return string|null The query column type
+     * ExtendedBlock stores data in separate tables, so returns empty array.
+     *
+     * @return array|string The query column type
      */
-    public function getQueryColumnType(): ?string
+    public function getQueryColumnType(): array|string
+    {
+        return [];
+    }
+
+    /**
+     * Returns data for query resource.
+     *
+     * ExtendedBlock doesn't store data in the query table, returns null.
+     *
+     * @param mixed                $data   The block data
+     * @param Concrete|null        $object The parent object
+     * @param array<string, mixed> $params Additional parameters
+     *
+     * @return mixed The query resource data (null as data is stored separately)
+     */
+    public function getDataForQueryResource(mixed $data, ?Concrete $object = null, array $params = []): mixed
     {
         return null;
     }
@@ -209,13 +234,13 @@ class ExtendedBlock extends Data implements
      * This method is called when saving an object. It extracts the block data
      * and prepares it for storage in the separate extended block tables.
      *
-     * @param mixed                     $data   The block data (ExtendedBlockContainer or array)
-     * @param null|DataObject\Concrete  $object The parent object
-     * @param array<string, mixed>      $params Additional parameters
+     * @param mixed                $data   The block data (ExtendedBlockContainer or array)
+     * @param Concrete|null        $object The parent object
+     * @param array<string, mixed> $params Additional parameters
      *
      * @return mixed The transformed data (null as actual data is stored separately)
      */
-    public function getDataForResource(mixed $data, DataObject\Concrete $object = null, array $params = []): mixed
+    public function getDataForResource(mixed $data, ?Concrete $object = null, array $params = []): mixed
     {
         // Data is stored in separate tables via the save() hook
         // Return null as no data goes into the main object table
@@ -228,15 +253,15 @@ class ExtendedBlock extends Data implements
      * This method is called when loading an object. It retrieves block data
      * from the separate extended block tables.
      *
-     * @param mixed                     $data   The raw database data (usually null)
-     * @param null|DataObject\Concrete  $object The parent object
-     * @param array<string, mixed>      $params Additional parameters
+     * @param mixed                $data   The raw database data (usually null)
+     * @param Concrete|null        $object The parent object
+     * @param array<string, mixed> $params Additional parameters
      *
      * @return ExtendedBlockContainer|null The block container with items
      */
-    public function getDataFromResource(mixed $data, DataObject\Concrete $object = null, array $params = []): ?ExtendedBlockContainer
+    public function getDataFromResource(mixed $data, ?Concrete $object = null, array $params = []): ?ExtendedBlockContainer
     {
-        if (!$object instanceof DataObject\Concrete) {
+        if (!$object instanceof Concrete) {
             return null;
         }
 
@@ -257,11 +282,11 @@ class ExtendedBlock extends Data implements
     /**
      * Loads block data from the database for a given object.
      *
-     * @param DataObject\Concrete $object The parent object
+     * @param Concrete $object The parent object
      *
      * @return ExtendedBlockContainer The loaded block container
      */
-    public function loadBlockData(DataObject\Concrete $object): ExtendedBlockContainer
+    public function loadBlockData(Concrete $object): ExtendedBlockContainer
     {
         $container = new ExtendedBlockContainer(
             object: $object,
@@ -276,7 +301,7 @@ class ExtendedBlock extends Data implements
         try {
             // Check if table exists
             $tableExists = $db->fetchOne(
-                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?",
+                'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
                 [$tableName]
             );
 
@@ -302,7 +327,7 @@ class ExtendedBlock extends Data implements
                 $this->loadLocalizedData($container, $object);
             }
         } catch (\Exception $e) {
-            Logger::error('ExtendedBlock: Error loading block data: ' . $e->getMessage());
+            Logger::error('ExtendedBlock: Error loading block data: '.$e->getMessage());
         }
 
         return $container;
@@ -311,12 +336,12 @@ class ExtendedBlock extends Data implements
     /**
      * Creates a block item from a database row.
      *
-     * @param array<string, mixed>  $row    The database row
-     * @param DataObject\Concrete   $object The parent object
+     * @param array<string, mixed> $row    The database row
+     * @param Concrete             $object The parent object
      *
      * @return ExtendedBlockItem|null The created block item
      */
-    protected function createBlockItemFromRow(array $row, DataObject\Concrete $object): ?ExtendedBlockItem
+    protected function createBlockItemFromRow(array $row, Concrete $object): ?ExtendedBlockItem
     {
         $type = $row['type'] ?? 'default';
         $index = (int) ($row['index'] ?? 0);
@@ -351,11 +376,9 @@ class ExtendedBlock extends Data implements
      * Loads localized data for block items.
      *
      * @param ExtendedBlockContainer $container The container to populate
-     * @param DataObject\Concrete    $object    The parent object
-     *
-     * @return void
+     * @param Concrete               $object    The parent object
      */
-    protected function loadLocalizedData(ExtendedBlockContainer $container, DataObject\Concrete $object): void
+    protected function loadLocalizedData(ExtendedBlockContainer $container, Concrete $object): void
     {
         $localizedTableName = $this->getLocalizedTableName($object->getClassId());
         $db = Db::get();
@@ -363,7 +386,7 @@ class ExtendedBlock extends Data implements
         try {
             // Check if localized table exists
             $tableExists = $db->fetchOne(
-                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?",
+                'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
                 [$localizedTableName]
             );
 
@@ -372,7 +395,7 @@ class ExtendedBlock extends Data implements
             }
 
             // Load all localized data at once for efficiency
-            $itemIds = array_map(fn($item) => $item->getId(), $container->getItems());
+            $itemIds = array_map(fn ($item) => $item->getId(), $container->getItems());
             if (empty($itemIds)) {
                 return;
             }
@@ -399,7 +422,7 @@ class ExtendedBlock extends Data implements
                 }
             }
         } catch (\Exception $e) {
-            Logger::error('ExtendedBlock: Error loading localized data: ' . $e->getMessage());
+            Logger::error('ExtendedBlock: Error loading localized data: '.$e->getMessage());
         }
     }
 
@@ -432,12 +455,10 @@ class ExtendedBlock extends Data implements
      * - Saving localized data to the localized table
      * - Removing deleted items
      *
-     * @param DataObject\Concrete   $object The parent object being saved
-     * @param array<string, mixed>  $params Additional parameters
-     *
-     * @return void
+     * @param Concrete             $object The parent object being saved
+     * @param array<string, mixed> $params Additional parameters
      */
-    public function save(DataObject\Concrete $object, array $params = []): void
+    public function save(Concrete $object, array $params = []): void
     {
         $container = $object->getValueForFieldName($this->getName());
         if (!$container instanceof ExtendedBlockContainer) {
@@ -464,7 +485,7 @@ class ExtendedBlock extends Data implements
             $index = 0;
             foreach ($container->getItems() as $item) {
                 $this->saveBlockItem($item, $object, $index, $db, $tableName);
-                $index++;
+                ++$index;
             }
 
             // Save localized data if present
@@ -475,7 +496,7 @@ class ExtendedBlock extends Data implements
             $db->commit();
         } catch (\Exception $e) {
             $db->rollBack();
-            Logger::error('ExtendedBlock: Error saving block data: ' . $e->getMessage());
+            Logger::error('ExtendedBlock: Error saving block data: '.$e->getMessage());
             throw $e;
         }
     }
@@ -483,20 +504,18 @@ class ExtendedBlock extends Data implements
     /**
      * Saves a single block item to the database.
      *
-     * @param ExtendedBlockItem       $item       The item to save
-     * @param DataObject\Concrete     $object     The parent object
-     * @param int                     $index      The item index/position
-     * @param \Doctrine\DBAL\Connection $db       The database connection
-     * @param string                  $tableName  The target table name
-     *
-     * @return void
+     * @param ExtendedBlockItem         $item      The item to save
+     * @param Concrete                  $object    The parent object
+     * @param int                       $index     The item index/position
+     * @param \Doctrine\DBAL\Connection $db        The database connection
+     * @param string                    $tableName The target table name
      */
     protected function saveBlockItem(
         ExtendedBlockItem $item,
-        DataObject\Concrete $object,
+        Concrete $object,
         int $index,
         \Doctrine\DBAL\Connection $db,
-        string $tableName
+        string $tableName,
     ): void {
         $data = [
             'o_id' => $object->getId(),
@@ -525,11 +544,9 @@ class ExtendedBlock extends Data implements
      * Saves localized data for all block items.
      *
      * @param ExtendedBlockContainer $container The container with items
-     * @param DataObject\Concrete    $object    The parent object
-     *
-     * @return void
+     * @param Concrete               $object    The parent object
      */
-    protected function saveLocalizedData(ExtendedBlockContainer $container, DataObject\Concrete $object): void
+    protected function saveLocalizedData(ExtendedBlockContainer $container, Concrete $object): void
     {
         $localizedTableName = $this->getLocalizedTableName($object->getClassId());
         $db = Db::get();
@@ -538,7 +555,7 @@ class ExtendedBlock extends Data implements
         $this->ensureLocalizedTableExists($object->getClassId());
 
         // Delete existing localized data
-        $itemIds = array_map(fn($item) => $item->getId(), $container->getItems());
+        $itemIds = array_map(fn ($item) => $item->getId(), $container->getItems());
         if (!empty($itemIds)) {
             $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
             $db->executeStatement(
@@ -575,7 +592,7 @@ class ExtendedBlock extends Data implements
                             foreach ($fieldDef->getFieldDefinitions() as $localizedFieldDef) {
                                 $fieldName = $localizedFieldDef->getName();
                                 $value = $localizedData[$language][$fieldName] ?? null;
-                                if ($value !== null) {
+                                if (null !== $value) {
                                     $data[$fieldName] = $localizedFieldDef->getDataForResource($value, $object);
                                 }
                             }
@@ -593,12 +610,10 @@ class ExtendedBlock extends Data implements
      *
      * Called when the parent object is deleted.
      *
-     * @param DataObject\Concrete   $object The object being deleted
-     * @param array<string, mixed>  $params Additional parameters
-     *
-     * @return void
+     * @param Concrete             $object The object being deleted
+     * @param array<string, mixed> $params Additional parameters
      */
-    public function delete(DataObject\Concrete $object, array $params = []): void
+    public function delete(Concrete $object, array $params = []): void
     {
         $db = Db::get();
         $tableName = $this->getTableName($object->getClassId());
@@ -606,7 +621,7 @@ class ExtendedBlock extends Data implements
         try {
             // Check if table exists before deleting
             $tableExists = $db->fetchOne(
-                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?",
+                'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
                 [$tableName]
             );
 
@@ -624,7 +639,7 @@ class ExtendedBlock extends Data implements
             if (!empty($itemIds) && $this->hasLocalizedFields()) {
                 $localizedTableName = $this->getLocalizedTableName($object->getClassId());
                 $localizedTableExists = $db->fetchOne(
-                    "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?",
+                    'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
                     [$localizedTableName]
                 );
 
@@ -643,7 +658,7 @@ class ExtendedBlock extends Data implements
                 [$object->getId(), $this->getName()]
             );
         } catch (\Exception $e) {
-            Logger::error('ExtendedBlock: Error deleting block data: ' . $e->getMessage());
+            Logger::error('ExtendedBlock: Error deleting block data: '.$e->getMessage());
         }
     }
 
@@ -656,7 +671,7 @@ class ExtendedBlock extends Data implements
      */
     public function getTableName(string $classId): string
     {
-        return $this->tablePrefix . $classId . '_' . $this->getName();
+        return $this->tablePrefix.$classId.'_'.$this->getName();
     }
 
     /**
@@ -668,7 +683,7 @@ class ExtendedBlock extends Data implements
      */
     public function getLocalizedTableName(string $classId): string
     {
-        return $this->getTableName($classId) . '_localized';
+        return $this->getTableName($classId).'_localized';
     }
 
     /**
@@ -678,8 +693,6 @@ class ExtendedBlock extends Data implements
      * based on the block definitions.
      *
      * @param string $classId The class ID
-     *
-     * @return void
      */
     protected function ensureTableExists(string $classId): void
     {
@@ -688,7 +701,7 @@ class ExtendedBlock extends Data implements
 
         // Check if table already exists
         $tableExists = $db->fetchOne(
-            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?",
+            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
             [$tableName]
         );
 
@@ -724,7 +737,7 @@ class ExtendedBlock extends Data implements
         $columns[] = 'INDEX `fieldname` (`fieldname`)';
         $columns[] = 'INDEX `type` (`type`)';
 
-        $sql = "CREATE TABLE `{$tableName}` (\n" . implode(",\n", $columns) . "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $sql = "CREATE TABLE `{$tableName}` (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         $db->executeStatement($sql);
     }
@@ -736,8 +749,6 @@ class ExtendedBlock extends Data implements
      * for localized field definitions.
      *
      * @param string $classId The class ID
-     *
-     * @return void
      */
     protected function ensureLocalizedTableExists(string $classId): void
     {
@@ -746,7 +757,7 @@ class ExtendedBlock extends Data implements
 
         // Check if table already exists
         $tableExists = $db->fetchOne(
-            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?",
+            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
             [$tableName]
         );
 
@@ -782,7 +793,7 @@ class ExtendedBlock extends Data implements
         $columns[] = 'INDEX `language` (`language`)';
         $columns[] = 'UNIQUE KEY `ooo_id_language` (`ooo_id`, `language`)';
 
-        $sql = "CREATE TABLE `{$tableName}` (\n" . implode(",\n", $columns) . "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $sql = "CREATE TABLE `{$tableName}` (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         $db->executeStatement($sql);
     }
@@ -793,9 +804,9 @@ class ExtendedBlock extends Data implements
      * Checks for:
      * - Valid block definitions
      * - No nested ExtendedBlock in LocalizedFields
+     * - No Block inside ExtendedBlock
+     * - No ExtendedBlock inside Block
      * - Proper field naming
-     *
-     * @return void
      *
      * @throws \Exception If validation fails
      */
@@ -803,10 +814,7 @@ class ExtendedBlock extends Data implements
     {
         // Check for nested ExtendedBlock in LocalizedFields
         if ($this->disallowAddingInLocalizedField) {
-            throw new \Exception(
-                'ExtendedBlock with localized fields cannot be added inside a LocalizedFields container. ' .
-                'This would create an infinite recursion. Please restructure your class definition.'
-            );
+            throw new \Exception('ExtendedBlock with localized fields cannot be added inside a LocalizedFields container. This would create an infinite recursion. Please restructure your class definition.');
         }
 
         // Validate block definitions
@@ -819,19 +827,22 @@ class ExtendedBlock extends Data implements
                 foreach ($blockDef['fields'] as $field) {
                     // Check for nested ExtendedBlock
                     if ($field instanceof self) {
-                        throw new \Exception(
-                            "ExtendedBlock cannot contain another ExtendedBlock. Type: {$typeName}"
-                        );
+                        throw new \Exception("ExtendedBlock cannot contain another ExtendedBlock. Type: {$typeName}");
                     }
 
-                    // Check for ExtendedBlock inside LocalizedFields
+                    // Check for Block inside ExtendedBlock
+                    if ($field instanceof Block) {
+                        throw new \Exception("ExtendedBlock cannot contain a Block. Type: {$typeName}. ".'Block nesting is not supported to ensure data integrity and prevent performance issues.');
+                    }
+
+                    // Check for ExtendedBlock/Block inside LocalizedFields
                     if ($field instanceof Localizedfields) {
                         foreach ($field->getFieldDefinitions() as $localizedField) {
                             if ($localizedField instanceof self) {
-                                throw new \Exception(
-                                    'ExtendedBlock cannot be placed inside LocalizedFields within an ExtendedBlock. ' .
-                                    "Type: {$typeName}"
-                                );
+                                throw new \Exception('ExtendedBlock cannot be placed inside LocalizedFields within an ExtendedBlock. '."Type: {$typeName}");
+                            }
+                            if ($localizedField instanceof Block) {
+                                throw new \Exception('Block cannot be placed inside LocalizedFields within an ExtendedBlock. '."Type: {$typeName}. Block nesting is not supported.");
                             }
                         }
                     }
@@ -866,17 +877,18 @@ class ExtendedBlock extends Data implements
     /**
      * Returns the data for grid view.
      *
-     * @param mixed                     $data   The block data
-     * @param DataObject\Concrete|null  $object The parent object
-     * @param array<string, mixed>      $params Additional parameters
+     * @param mixed                $data   The block data
+     * @param Concrete|null        $object The parent object
+     * @param array<string, mixed> $params Additional parameters
      *
      * @return string The grid display value
      */
-    public function getDataForGrid(mixed $data, Concrete $object = null, array $params = []): string
+    public function getDataForGrid(mixed $data, ?Concrete $object = null, array $params = []): string
     {
         if ($data instanceof ExtendedBlockContainer) {
             $count = count($data->getItems());
-            return sprintf('%d item%s', $count, $count !== 1 ? 's' : '');
+
+            return sprintf('%d item%s', $count, 1 !== $count ? 's' : '');
         }
 
         return '0 items';
@@ -885,13 +897,13 @@ class ExtendedBlock extends Data implements
     /**
      * Returns the data for editmode in admin.
      *
-     * @param mixed                     $data   The block data
-     * @param DataObject\Concrete|null  $object The parent object
-     * @param array<string, mixed>      $params Additional parameters
+     * @param mixed                $data   The block data
+     * @param Concrete|null        $object The parent object
+     * @param array<string, mixed> $params Additional parameters
      *
      * @return array<string, mixed>|null The editmode data
      */
-    public function getDataForEditmode(mixed $data, Concrete $object = null, array $params = []): ?array
+    public function getDataForEditmode(mixed $data, ?Concrete $object = null, array $params = []): ?array
     {
         if (!$data instanceof ExtendedBlockContainer) {
             return null;
@@ -939,13 +951,13 @@ class ExtendedBlock extends Data implements
     /**
      * Returns the data from editmode submission.
      *
-     * @param mixed                     $data   The submitted data
-     * @param DataObject\Concrete|null  $object The parent object
-     * @param array<string, mixed>      $params Additional parameters
+     * @param mixed                $data   The submitted data
+     * @param Concrete|null        $object The parent object
+     * @param array<string, mixed> $params Additional parameters
      *
      * @return ExtendedBlockContainer The block container
      */
-    public function getDataFromEditmode(mixed $data, Concrete $object = null, array $params = []): ExtendedBlockContainer
+    public function getDataFromEditmode(mixed $data, ?Concrete $object = null, array $params = []): ExtendedBlockContainer
     {
         $container = new ExtendedBlockContainer(
             object: $object,
@@ -1008,17 +1020,18 @@ class ExtendedBlock extends Data implements
     /**
      * Returns data for JSON export.
      *
-     * @param mixed                     $data   The block data
-     * @param DataObject\Concrete|null  $object The parent object
-     * @param array<string, mixed>      $params Additional parameters
+     * @param mixed                $data   The block data
+     * @param Concrete|null        $object The parent object
+     * @param array<string, mixed> $params Additional parameters
      *
      * @return array<string, mixed>|null The JSON-serializable data
      */
-    public function getDataForVersionPreview(mixed $data, DataObject\Concrete $object = null, array $params = []): ?string
+    public function getDataForVersionPreview(mixed $data, ?Concrete $object = null, array $params = []): ?string
     {
         if ($data instanceof ExtendedBlockContainer) {
             $count = count($data->getItems());
-            return sprintf('<span>%d extended block item%s</span>', $count, $count !== 1 ? 's' : '');
+
+            return sprintf('<span>%d extended block item%s</span>', $count, 1 !== $count ? 's' : '');
         }
 
         return '<span>No items</span>';
@@ -1078,15 +1091,11 @@ class ExtendedBlock extends Data implements
     /**
      * Returns the parameter data for the object getter.
      *
-     * @param mixed                     $data   The data
-     * @param DataObject\Concrete|null  $object The object
-     * @param array<string, mixed>      $params Parameters
-     *
      * @return mixed The getter parameter data
      */
     public function getParameterTypeDeclaration(): ?string
     {
-        return '?\\' . ExtendedBlockContainer::class;
+        return '?\\'.ExtendedBlockContainer::class;
     }
 
     /**
@@ -1096,7 +1105,7 @@ class ExtendedBlock extends Data implements
      */
     public function getReturnTypeDeclaration(): ?string
     {
-        return '?\\' . ExtendedBlockContainer::class;
+        return '?\\'.ExtendedBlockContainer::class;
     }
 
     /**
@@ -1106,19 +1115,19 @@ class ExtendedBlock extends Data implements
      */
     public function getPhpType(): ?string
     {
-        return '\\' . ExtendedBlockContainer::class . '|null';
+        return '\\'.ExtendedBlockContainer::class.'|null';
     }
 
     /**
      * Exports data for VarExporter.
      *
-     * @param mixed                 $value   The value to export
-     * @param DataObject\Concrete   $object  The object
-     * @param array<string, mixed>  $params  Parameters
+     * @param mixed                $value  The value to export
+     * @param Concrete             $object The object
+     * @param array<string, mixed> $params Parameters
      *
      * @return array<string, mixed>|null The exported data
      */
-    public function getVarExporterData(mixed $value, DataObject\Concrete $object, array $params = []): ?array
+    public function getVarExporterData(mixed $value, Concrete $object, array $params = []): ?array
     {
         if (!$value instanceof ExtendedBlockContainer) {
             return null;
@@ -1130,13 +1139,13 @@ class ExtendedBlock extends Data implements
     /**
      * Imports data from VarExporter format.
      *
-     * @param mixed                 $data    The data to import
-     * @param DataObject\Concrete   $object  The object
-     * @param array<string, mixed>  $params  Parameters
+     * @param mixed                $data   The data to import
+     * @param Concrete             $object The object
+     * @param array<string, mixed> $params Parameters
      *
      * @return ExtendedBlockContainer The imported data
      */
-    public function setVarExporterData(mixed $data, DataObject\Concrete $object, array $params = []): ExtendedBlockContainer
+    public function setVarExporterData(mixed $data, Concrete $object, array $params = []): ExtendedBlockContainer
     {
         return $this->getDataFromEditmode($data, $object, $params);
     }
@@ -1157,6 +1166,7 @@ class ExtendedBlock extends Data implements
     public function setLayoutDefinitions(array $layoutDefinitions): static
     {
         $this->layoutDefinitions = $layoutDefinitions;
+
         return $this;
     }
 
@@ -1174,6 +1184,7 @@ class ExtendedBlock extends Data implements
     public function setBlockDefinitions(array $blockDefinitions): static
     {
         $this->blockDefinitions = $blockDefinitions;
+
         return $this;
     }
 
@@ -1185,6 +1196,7 @@ class ExtendedBlock extends Data implements
     public function setAllowLocalizedFields(bool $allowLocalizedFields): static
     {
         $this->allowLocalizedFields = $allowLocalizedFields;
+
         return $this;
     }
 
@@ -1196,6 +1208,7 @@ class ExtendedBlock extends Data implements
     public function setMaxItems(?int $maxItems): static
     {
         $this->maxItems = $maxItems;
+
         return $this;
     }
 
@@ -1207,6 +1220,7 @@ class ExtendedBlock extends Data implements
     public function setMinItems(int $minItems): static
     {
         $this->minItems = $minItems;
+
         return $this;
     }
 
@@ -1218,6 +1232,7 @@ class ExtendedBlock extends Data implements
     public function setCollapsible(bool $collapsible): static
     {
         $this->collapsible = $collapsible;
+
         return $this;
     }
 
@@ -1229,6 +1244,7 @@ class ExtendedBlock extends Data implements
     public function setCollapsed(bool $collapsed): static
     {
         $this->collapsed = $collapsed;
+
         return $this;
     }
 
@@ -1240,6 +1256,7 @@ class ExtendedBlock extends Data implements
     public function setLazyLoading(bool $lazyLoading): static
     {
         $this->lazyLoading = $lazyLoading;
+
         return $this;
     }
 
@@ -1251,6 +1268,7 @@ class ExtendedBlock extends Data implements
     public function setTablePrefix(string $tablePrefix): static
     {
         $this->tablePrefix = $tablePrefix;
+
         return $this;
     }
 }

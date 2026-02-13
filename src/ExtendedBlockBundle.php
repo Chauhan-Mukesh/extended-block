@@ -3,12 +3,11 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle for Pimcore
+ * Extended Block Bundle for Pimcore.
  *
  * This bundle provides an enhanced block data type that stores data in separate
  * database tables instead of serialized data in a single column.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
@@ -16,11 +15,11 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle;
 
+use ExtendedBlockBundle\Installer\ExtendedBlockInstaller;
 use Pimcore\Extension\Bundle\AbstractPimcoreBundle;
 use Pimcore\Extension\Bundle\Installer\InstallerInterface;
 use Pimcore\Extension\Bundle\PimcoreBundleAdminClassicInterface;
 use Pimcore\Extension\Bundle\Traits\BundleAdminClassicTrait;
-use ExtendedBlockBundle\Installer\ExtendedBlockInstaller;
 
 /**
  * Main bundle class for Extended Block Bundle.
@@ -36,7 +35,7 @@ use ExtendedBlockBundle\Installer\ExtendedBlockInstaller;
  * - Performance optimized database queries
  * - Complete admin UI integration
  *
- * @see \ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock
+ * @see Model\DataObject\ClassDefinition\Data\ExtendedBlock
  */
 class ExtendedBlockBundle extends AbstractPimcoreBundle implements PimcoreBundleAdminClassicInterface
 {
@@ -63,7 +62,7 @@ class ExtendedBlockBundle extends AbstractPimcoreBundle implements PimcoreBundle
     public function getDescription(): string
     {
         return 'Extended Block data type with separate table storage for Pimcore. '
-            . 'Provides better performance and queryability compared to standard block type.';
+            .'Provides better performance and queryability compared to standard block type.';
     }
 
     /**
