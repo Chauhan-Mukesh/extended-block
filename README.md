@@ -115,9 +115,6 @@ extended_block:
     # Enable strict validation mode (default: true)
     strict_mode: true
     
-    # Reserved for future use - LocalizedFields support (default: false)
-    enable_localized_fields: false
-    
     # Maximum items per block (null for unlimited)
     max_items: null
     
