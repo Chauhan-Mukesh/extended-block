@@ -256,7 +256,7 @@
 
 /* Form panel improvements for better readability */
 .extended-block-container .x-form-item-label {
-    width: 180px !important;
+    min-width: 180px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

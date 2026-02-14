@@ -122,10 +122,11 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
                                 var fixedTitle = '';
                                 for (var i = 0; i < nameValue.length; i++) {
                                     var currentChar = nameValue[i];
-                                    // Capitalize first letter, add space before uppercase letters
+                                    // Capitalize first letter, add space before uppercase letters (excluding digits)
+                                    var isDigit = /[0-9]/.test(currentChar);
                                     fixedTitle += i === 0
                                         ? currentChar.toUpperCase()
-                                        : (currentChar === currentChar.toUpperCase() && (currentChar.charCodeAt(0) < 48 || currentChar.charCodeAt(0) > 57))
+                                        : (currentChar === currentChar.toUpperCase() && !isDigit)
                                             ? ' ' + currentChar
                                             : currentChar;
                                 }
@@ -479,7 +480,7 @@ pimcore.object.classes.data.extendedBlock.fieldsEditor = Class.create({
      */
     initialize: function(typeName, fields, callback) {
         this.typeName = typeName;
-        this.fields = Ext.clone(fields) || [];
+        this.fields = Ext.clone(fields || []);
         this.callback = callback;
 
         this.showWindow();
@@ -550,7 +551,7 @@ pimcore.object.classes.data.extendedBlock.fieldsEditor = Class.create({
                     }
                 },
                 {
-                    text: t('title') + ' (' + t('label') + ')' || 'Title (Label)',
+                    text: (t('title') || 'Title') + ' (' + (t('label') || 'Label') + ')',
                     dataIndex: 'title',
                     flex: 1,
                     editor: {
@@ -631,7 +632,7 @@ pimcore.object.classes.data.extendedBlock.fieldsEditor = Class.create({
                     height: 40,
                     bodyStyle: 'padding: 10px;',
                     html: '<div class="extended-block-info">' +
-                        (t('fields_editor_help') || 'Double-click cells to edit. Use the + menu to add fields. Drag rows to reorder.') +
+                        (t('fields_editor_help') || 'Click cells to edit. Use the + menu to add fields. Use arrow buttons to reorder.') +
                         '</div>'
                 },
                 this.fieldsGrid
