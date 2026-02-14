@@ -114,10 +114,10 @@
     margin: 10px;
 }
 
-/* Grid view styles for block definitions (Issue #5: Improved responsiveness) */
+/* Grid view styles for block definitions */
 .extended-block-definitions-grid {
     border: 1px solid #e0e0e0;
-    min-width: 400px;
+    width: 100%;
 }
 
 .extended-block-definitions-grid .x-grid-header {
@@ -125,27 +125,17 @@
 }
 
 .extended-block-definitions-grid .x-grid-cell {
-    padding: 4px 8px;
+    padding: 6px 10px;
 }
 
 .extended-block-definitions-grid .x-grid-row:hover {
     background-color: #f0f7ff;
 }
 
-/* Field count badge */
-.extended-block-field-count {
-    display: inline-block;
-    background-color: #3b5998;
-    color: #fff;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-/* Fields editor grid styles (Issue #6: New grid-based editor) */
+/* Fields editor grid styles */
 .extended-block-fields-grid {
     border: 1px solid #e0e0e0;
+    width: 100%;
 }
 
 .extended-block-fields-grid .x-grid-header {
@@ -153,7 +143,7 @@
 }
 
 .extended-block-fields-grid .x-grid-cell {
-    padding: 4px 8px;
+    padding: 6px 10px;
 }
 
 .extended-block-fields-grid .x-grid-row:hover {
@@ -217,13 +207,7 @@
     justify-content: center;
 }
 
-/* Responsive adjustments (Issue #5: Improved responsiveness) */
-@media (max-width: 1400px) {
-    .extended-block-definitions-grid {
-        min-width: 350px;
-    }
-}
-
+/* Responsive adjustments */
 @media (max-width: 1200px) {
     .extended-block-container {
         font-size: 12px;
@@ -233,30 +217,28 @@
         font-size: 12px;
     }
 
-    .extended-block-definitions-grid {
-        min-width: 300px;
-    }
-
-    .extended-block-definitions-grid .x-grid-cell {
-        padding: 3px 6px;
+    .extended-block-definitions-grid .x-grid-cell,
+    .extended-block-fields-grid .x-grid-cell {
+        padding: 4px 6px;
         font-size: 11px;
     }
 }
 
 @media (max-width: 992px) {
-    .extended-block-definitions-grid {
-        min-width: 250px;
+    .extended-block-container {
+        font-size: 11px;
     }
 
-    .extended-block-field-count {
-        padding: 1px 6px;
+    .extended-block-definitions-grid .x-grid-cell,
+    .extended-block-fields-grid .x-grid-cell {
+        padding: 3px 5px;
         font-size: 10px;
     }
 }
 
 /* Form panel improvements for better readability */
 .extended-block-container .x-form-item-label {
-    min-width: 180px;
+    min-width: 150px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
