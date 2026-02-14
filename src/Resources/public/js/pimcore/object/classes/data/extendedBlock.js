@@ -203,7 +203,7 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
                 // Collapsed by default
                 {
                     xtype: 'checkbox',
-                    fieldLabel: t('collapsed') || 'Collapsed by Default',
+                    fieldLabel: t('collapsed_by_default') || 'Collapsed by Default',
                     name: 'collapsed',
                     checked: this.datax.collapsed === true
                 },

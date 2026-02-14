@@ -612,8 +612,10 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                     'language' => $language,
                 ];
 
-                // Add localized field values - Note: LocalizedFields not allowed in ExtendedBlock
-                // This code path is kept for backward compatibility but should not be reached
+                // LocalizedFields are no longer supported in ExtendedBlock.
+                // This code path is maintained for backward compatibility with
+                // existing installations that may have localized data.
+                Logger::debug('ExtendedBlock: saveLocalizedData called - this is deprecated functionality');
 
                 // DBAL's insert method uses parameterized queries, which is safe
                 $db->insert($localizedTableName, $data);

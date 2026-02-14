@@ -375,8 +375,9 @@ class TableSchemaService
             '`language` VARCHAR(10) NOT NULL COMMENT "Language code (e.g., en, de)"',
         ];
 
-        // Note: LocalizedFields not allowed in ExtendedBlock
-        // This method creates base localized table structure only
+        // LocalizedFields are no longer supported in ExtendedBlock.
+        // This table structure is maintained for backward compatibility with
+        // existing installations that may have localized data.
 
         // Add indexes
         $columns[] = 'PRIMARY KEY (`id`)';
