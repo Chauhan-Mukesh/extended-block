@@ -22,6 +22,10 @@ pimcore.registerNS('pimcore.object.classes.data.extendedBlock');
  * - Setting display options (collapsible, lazy loading)
  * - Adding sub-fields via tree view (like core Block)
  *
+ * Follows Pimcore's data.js pattern: uses $super() to call parent's getLayout(),
+ * adds specific settings to this.specificPanel, and relies on parent's getData()
+ * which uses applyData() to sync form values.
+ *
  * @extends pimcore.object.classes.data.data
  */
 pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.data.data, {
@@ -33,14 +37,20 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
     type: 'extendedBlock',
 
     /**
+     * Disable index for this type
+     * @type {boolean}
+     */
+    allowIndex: false,
+
+    /**
      * Whether this type can be used in various contexts
      * @type {Object}
      */
     allowIn: {
         object: true,
-        objectbrick: false,
-        fieldcollection: false,
-        localizedfield: false,
+        objectbrick: true,
+        fieldcollection: true,
+        localizedfield: true,
         classificationstore: false,
         block: false,
         extendedBlock: false  // Prevent nesting ExtendedBlock inside itself
@@ -60,6 +70,7 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
 
     /**
      * Initializes the data type definition.
+     * Follows Pimcore pattern by calling initData and setting availableSettingsFields.
      *
      * @param {Object} treeNode - The tree node in class editor
      * @param {Object} initData - Initial configuration data
@@ -68,6 +79,9 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
         this.type = 'extendedBlock';
         this.initData(initData);
         this.treeNode = treeNode;
+
+        // Define which standard settings fields are available (following Pimcore block.js pattern)
+        this.availableSettingsFields = ['name', 'title', 'noteditable', 'invisible', 'style'];
     },
 
     /**
@@ -101,202 +115,112 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
 
     /**
      * Returns the configuration panel layout.
+     * Follows Pimcore pattern: calls $super() to build standard layout,
+     * then adds specific settings to this.specificPanel.
      *
-     * Creates the settings interface including:
-     * - General settings (title, name)
-     * - Item limits (min/max)
-     * - Display settings
-     *
-     * @returns {Ext.form.Panel} The settings panel
+     * @param {Function} $super - Parent class method
+     * @returns {Ext.Panel} The layout panel
      */
-    getLayout: function() {
-        var _this = this;
+    getLayout: function($super) {
+        // Call parent to create standard layout with standardSettingsForm, layoutSettingsForm, specificPanel
+        $super();
 
-        // Settings panel
-        this.settingsPanel = new Ext.form.Panel({
-            layout: 'form',
-            bodyStyle: 'padding: 10px;',
-            autoScroll: true,
-            defaults: {
-                labelWidth: 180
-            },
-            items: [
-                // Name field
-                {
-                    xtype: 'textfield',
-                    fieldLabel: t('name'),
-                    name: 'name',
-                    itemId: 'name',
-                    value: this.datax.name,
-                    width: 540,
-                    maxLength: 70,
-                    enableKeyEvents: true,
-                    listeners: {
-                        keyup: function(field) {
-                            // Sanitize name
-                            field.setValue(field.getValue().replace(/[^a-zA-Z0-9_]/g, ''));
+        // Clear specific panel and add ExtendedBlock-specific settings
+        this.specificPanel.removeAll();
 
-                            // Auto-fill title field if untouched
-                            var title = field.ownerCt.getComponent('title');
-                            if (title && title._autooverwrite === true) {
-                                var nameValue = field.getValue();
-                                var fixedTitle = '';
-                                for (var i = 0; i < nameValue.length; i++) {
-                                    var currentChar = nameValue[i];
-                                    var isDigit = /[0-9]/.test(currentChar);
-                                    fixedTitle += i === 0
-                                        ? currentChar.toUpperCase()
-                                        : (currentChar === currentChar.toUpperCase() && !isDigit)
-                                            ? ' ' + currentChar
-                                            : currentChar;
-                                }
-                                title.setValue(fixedTitle);
-                            }
-
-                            // Update tree node text in real-time
-                            _this.updateTreeNodeName(field.getValue());
-                        }
-                    }
-                },
-                // Title field
-                {
-                    xtype: 'textfield',
-                    fieldLabel: t('title') + ' (' + t('label') + ')',
-                    name: 'title',
-                    itemId: 'title',
-                    value: this.datax.title,
-                    width: 540,
-                    enableKeyEvents: true,
-                    listeners: {
-                        keyup: function(field) {
-                            field._autooverwrite = false;
-                        },
-                        afterrender: function(field) {
-                            if (!field.getValue() || field.getValue().length < 1) {
-                                field._autooverwrite = true;
-                            }
-                        }
-                    }
-                },
-                // Tooltip field
-                {
-                    xtype: 'textarea',
-                    fieldLabel: t('tooltip'),
-                    name: 'tooltip',
-                    value: this.datax.tooltip || '',
-                    width: 540,
-                    height: 80
-                },
-                // Min items
+        if (!this.isInCustomLayoutEditor()) {
+            this.specificPanel.add([
                 {
                     xtype: 'numberfield',
                     fieldLabel: t('minimum_items'),
                     name: 'minItems',
-                    value: this.datax.minItems || 0,
-                    minValue: 0,
-                    width: 300
+                    value: this.datax.minItems,
+                    minValue: 0
                 },
-                // Max items
                 {
                     xtype: 'numberfield',
                     fieldLabel: t('maximum_items'),
                     name: 'maxItems',
                     value: this.datax.maxItems,
-                    minValue: 0,
-                    width: 300
+                    minValue: 0
                 },
-                // Collapsible
-                {
-                    xtype: 'checkbox',
-                    fieldLabel: t('collapsible'),
-                    name: 'collapsible',
-                    checked: this.datax.collapsible !== false
-                },
-                // Collapsed by default
-                {
-                    xtype: 'checkbox',
-                    fieldLabel: t('collapsed_by_default'),
-                    name: 'collapsed',
-                    checked: this.datax.collapsed === true
-                },
-                // Lazy loading
                 {
                     xtype: 'checkbox',
                     fieldLabel: t('lazy_loading'),
                     name: 'lazyLoading',
-                    checked: this.datax.lazyLoading !== false
+                    disabled: this.isInCustomLayoutEditor(),
+                    checked: this.datax.lazyLoading
                 },
-                // Info panel about adding fields
                 {
-                    xtype: 'panel',
-                    cls: 'extended-block-info-panel',
-                    style: 'margin-top: 20px;',
-                    html: '<div class="extended-block-help-text">' +
-                        '<strong>' + t('add_fields') + ':</strong><br>' +
-                        '<span>' + t('extended_block_fields_help') + '</span>' +
-                        '</div>'
+                    xtype: 'checkbox',
+                    fieldLabel: t('disallow_addremove'),
+                    name: 'disallowAddRemove',
+                    checked: this.datax.disallowAddRemove
+                },
+                {
+                    xtype: 'checkbox',
+                    fieldLabel: t('disallow_reorder'),
+                    name: 'disallowReorder',
+                    checked: this.datax.disallowReorder
                 }
-            ]
+            ]);
+        }
+
+        // Add CSS style field (following Pimcore block.js pattern)
+        this.specificPanel.add({
+            xtype: 'textfield',
+            fieldLabel: t('css_style') + ' (float: left; margin:10px; ...)',
+            name: 'styleElement',
+            itemId: 'styleElement',
+            value: this.datax.styleElement,
+            width: 740
         });
 
-        return this.settingsPanel;
+        this.specificPanel.updateLayout();
+
+        // Add collapsible settings to standard settings form (following Pimcore block.js pattern)
+        this.standardSettingsForm.add([
+            {
+                xtype: 'checkbox',
+                fieldLabel: t('collapsible'),
+                name: 'collapsible',
+                checked: this.datax.collapsible
+            },
+            {
+                xtype: 'checkbox',
+                fieldLabel: t('collapsed'),
+                name: 'collapsed',
+                checked: this.datax.collapsed
+            }
+        ]);
+
+        this.standardSettingsForm.updateLayout();
+
+        return this.layout;
     },
 
     /**
-     * Updates the tree node text when the name field changes.
+     * Copies specific data from source (used for copy/paste functionality).
+     * Follows Pimcore block.js pattern.
      *
-     * @param {string} name - The new field name
+     * @param {Object} source - Source data object
      */
-    updateTreeNodeName: function(name) {
-        if (this.treeNode && name && this.isValidName(name)) {
-            this.treeNode.set('text', name);
+    applySpecialData: function(source) {
+        if (source.datax) {
+            if (!this.datax) {
+                this.datax = {};
+            }
+            Ext.apply(this.datax, {
+                minItems: source.datax.minItems,
+                maxItems: source.datax.maxItems,
+                disallowAddRemove: source.datax.disallowAddRemove,
+                disallowReorder: source.datax.disallowReorder,
+                collapsible: source.datax.collapsible,
+                collapsed: source.datax.collapsed,
+                lazyLoading: source.datax.lazyLoading,
+                styleElement: source.datax.styleElement
+            });
         }
-    },
-
-    /**
-     * Validates field name format.
-     *
-     * @param {string} name - The name to validate
-     * @returns {boolean} True if valid
-     */
-    isValidName: function(name) {
-        var validNamePattern = /^[a-zA-Z][a-zA-Z0-9_]*$/;
-        return validNamePattern.test(name);
-    },
-
-    /**
-     * Gets the data for saving.
-     *
-     * @returns {Object} The configuration data
-     */
-    getData: function() {
-        var values = this.settingsPanel.getForm().getFieldValues();
-
-        return {
-            name: values.name,
-            title: values.title,
-            tooltip: values.tooltip,
-            minItems: values.minItems,
-            maxItems: values.maxItems,
-            collapsible: values.collapsible,
-            collapsed: values.collapsed,
-            lazyLoading: values.lazyLoading
-        };
-    },
-
-    /**
-     * Validates the configuration.
-     *
-     * @returns {boolean} True if valid
-     */
-    isValid: function() {
-        var data = this.getData();
-
-        if (!data.name || data.name.length === 0) {
-            return false;
-        }
-
-        return true;
     },
 
     /**

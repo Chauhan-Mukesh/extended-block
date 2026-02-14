@@ -120,6 +120,21 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
     public bool $lazyLoading = true;
 
     /**
+     * Whether adding/removing block items is disallowed.
+     */
+    public bool $disallowAddRemove = false;
+
+    /**
+     * Whether reordering block items is disallowed.
+     */
+    public bool $disallowReorder = false;
+
+    /**
+     * Custom CSS style for block element (e.g., "float: left; margin: 10px;").
+     */
+    public ?string $styleElement = null;
+
+    /**
      * Whether to allow localized fields inside this block.
      */
     public bool $allowLocalizedFields = false;
@@ -1275,6 +1290,42 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
     public function setLazyLoading(bool $lazyLoading): static
     {
         $this->lazyLoading = $lazyLoading;
+
+        return $this;
+    }
+
+    public function isDisallowAddRemove(): bool
+    {
+        return $this->disallowAddRemove;
+    }
+
+    public function setDisallowAddRemove(bool $disallowAddRemove): static
+    {
+        $this->disallowAddRemove = $disallowAddRemove;
+
+        return $this;
+    }
+
+    public function isDisallowReorder(): bool
+    {
+        return $this->disallowReorder;
+    }
+
+    public function setDisallowReorder(bool $disallowReorder): static
+    {
+        $this->disallowReorder = $disallowReorder;
+
+        return $this;
+    }
+
+    public function getStyleElement(): ?string
+    {
+        return $this->styleElement;
+    }
+
+    public function setStyleElement(?string $styleElement): static
+    {
+        $this->styleElement = $styleElement;
 
         return $this;
     }
