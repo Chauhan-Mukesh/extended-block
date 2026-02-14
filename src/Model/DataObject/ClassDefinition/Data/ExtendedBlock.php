@@ -1250,9 +1250,92 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      */
     public function setBlockDefinitions(array $blockDefinitions): static
     {
+        // Convert array-based field definitions to proper Data objects
+        foreach ($blockDefinitions as $typeName => &$blockDef) {
+            if (isset($blockDef['fields']) && is_array($blockDef['fields'])) {
+                $convertedFields = [];
+                foreach ($blockDef['fields'] as $fieldConfig) {
+                    $field = $this->convertFieldConfigToDataObject($fieldConfig);
+                    if ($field) {
+                        $convertedFields[] = $field;
+                    }
+                }
+                $blockDef['fields'] = $convertedFields;
+            }
+        }
+
         $this->blockDefinitions = $blockDefinitions;
 
         return $this;
+    }
+
+    /**
+     * Converts a field configuration array to a Pimcore Data object.
+     *
+     * @param array<string, mixed>|Data $fieldConfig The field configuration
+     *
+     * @return Data|null The Data object or null if conversion fails
+     */
+    protected function convertFieldConfigToDataObject(array|Data $fieldConfig): ?Data
+    {
+        // If it's already a Data object, return it directly
+        if ($fieldConfig instanceof Data) {
+            return $fieldConfig;
+        }
+
+        // If it's not an array, return null
+        if (!is_array($fieldConfig)) {
+            return null;
+        }
+
+        // Get the field type - check both 'fieldtype' (from JS) and 'datatype' keys
+        $fieldtype = $fieldConfig['fieldtype'] ?? $fieldConfig['datatype'] ?? null;
+        if (!$fieldtype) {
+            return null;
+        }
+
+        // Map simple type names to full class names
+        $typeMap = [
+            'input' => Data\Input::class,
+            'textarea' => Data\Textarea::class,
+            'wysiwyg' => Data\Wysiwyg::class,
+            'numeric' => Data\Numeric::class,
+            'checkbox' => Data\Checkbox::class,
+            'date' => Data\Date::class,
+            'select' => Data\Select::class,
+            'multiselect' => Data\Multiselect::class,
+            'link' => Data\Link::class,
+            'image' => Data\Image::class,
+        ];
+
+        $className = $typeMap[$fieldtype] ?? null;
+        if (!$className || !class_exists($className)) {
+            Logger::warning("ExtendedBlock: Unknown field type '{$fieldtype}'");
+
+            return null;
+        }
+
+        try {
+            /** @var Data $field */
+            $field = new $className();
+
+            // Set common properties
+            if (isset($fieldConfig['name'])) {
+                $field->setName($fieldConfig['name']);
+            }
+            if (isset($fieldConfig['title'])) {
+                $field->setTitle($fieldConfig['title']);
+            }
+            if (isset($fieldConfig['tooltip'])) {
+                $field->setTooltip($fieldConfig['tooltip']);
+            }
+
+            return $field;
+        } catch (\Exception $e) {
+            Logger::error("ExtendedBlock: Error creating field '{$fieldtype}': ".$e->getMessage());
+
+            return null;
+        }
     }
 
     public function isAllowLocalizedFields(): bool

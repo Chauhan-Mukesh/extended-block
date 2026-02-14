@@ -207,10 +207,10 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
                     name: 'lazyLoading',
                     checked: this.datax.lazyLoading !== false
                 },
-                // Block definitions (Issue #5: Improved layout)
+                // Block definitions section
                 {
                     xtype: 'fieldset',
-                    title: t('block_definitions') || 'Block Definitions',
+                    title: 'Block Definitions',
                     collapsible: true,
                     collapsed: false,
                     layout: 'fit',
@@ -595,10 +595,12 @@ pimcore.object.classes.data.extendedBlock.fieldsEditor = Class.create({
                 {
                     region: 'north',
                     xtype: 'panel',
-                    height: 40,
+                    height: 60,
                     bodyStyle: 'padding: 10px;',
                     html: '<div class="extended-block-info">' +
-                        (t('fields_editor_help') || 'Click cells to edit. Use the + menu to add fields. Use arrow buttons to reorder.') +
+                        (t('fields_editor_help') || 'Configure the fields that will be available within this block type. ' +
+                        'Use the "Add Field" button to add new fields (Input, Textarea, Checkbox, etc.). ' +
+                        'Click cells to edit values. Use arrow buttons to reorder fields.') +
                         '</div>'
                 },
                 this.fieldsGrid
