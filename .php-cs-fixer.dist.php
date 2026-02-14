@@ -116,5 +116,9 @@ return (new PhpCsFixer\Config())
         // Misc
         'yoda_style' => false,
         'native_function_invocation' => false,
+        // Disable modern_serialization_methods as we need __sleep for Pimcore compatibility
+        // __sleep returns array of property names (Pimcore pattern)
+        // __serialize returns array of values (different behavior)
+        'modern_serialization_methods' => false,
     ])
     ->setFinder($finder);

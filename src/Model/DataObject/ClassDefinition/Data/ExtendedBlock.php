@@ -167,14 +167,14 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
     protected string $tablePrefix = 'object_eb_';
 
     /**
-     * Returns the list of variables to serialize.
+     * Returns the list of property names to serialize.
      *
      * Excludes runtime caches and computed values that should
      * be rebuilt on deserialization.
      *
-     * @return array<string> List of variable names to serialize
+     * @return array<string> List of property names to serialize
      */
-    public function __serialize(): array
+    public function __sleep(): array
     {
         $vars = get_object_vars($this);
         $blockedVars = $this->getBlockedVarsForExport();
