@@ -18,7 +18,6 @@ pimcore.registerNS('pimcore.object.classes.data.extendedBlock');
  * This class provides the configuration interface for:
  * - Defining block types with their fields
  * - Setting min/max item limits
- * - Configuring localized field support
  * - Setting display options (collapsible, lazy loading)
  *
  * @extends pimcore.object.classes.data.data
