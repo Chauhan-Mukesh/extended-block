@@ -44,7 +44,6 @@ class ExtendedBlockExtension extends Extension
 
         // Set bundle configuration parameters
         $container->setParameter('extended_block.table_prefix', $config['table_prefix']);
-        $container->setParameter('extended_block.enable_localized_fields', $config['enable_localized_fields']);
         $container->setParameter('extended_block.strict_mode', $config['strict_mode']);
 
         // Load service definitions from YAML configuration
