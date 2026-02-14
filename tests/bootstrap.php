@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle - PHPUnit Bootstrap
+ * Extended Block Bundle - PHPUnit Bootstrap.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License

@@ -170,4 +170,80 @@ class ExtendedBlockValidationTest extends TestCase
             'Should have method to check for ExtendedBlock in ObjectBricks'
         );
     }
+
+    /**
+     * Tests that ExtendedBlock has __set_state method for serialization.
+     *
+     * This is essential for class definition import/export from JSON
+     * and PHP var_export() serialization.
+     */
+    public function testExtendedBlockClassHasSetStateMethod(): void
+    {
+        $this->assertTrue(
+            method_exists(
+                'ExtendedBlockBundle\\Model\\DataObject\\ClassDefinition\\Data\\ExtendedBlock',
+                '__set_state'
+            ),
+            'ExtendedBlock should have __set_state method for serialization'
+        );
+    }
+
+    /**
+     * Tests that ExtendedBlock has getBlockedVarsForExport method.
+     *
+     * This method defines which variables should be excluded during
+     * serialization to avoid exporting runtime caches.
+     */
+    public function testExtendedBlockClassHasGetBlockedVarsForExportMethod(): void
+    {
+        $this->assertTrue(
+            method_exists(
+                'ExtendedBlockBundle\\Model\\DataObject\\ClassDefinition\\Data\\ExtendedBlock',
+                'getBlockedVarsForExport'
+            ),
+            'ExtendedBlock should have getBlockedVarsForExport method'
+        );
+    }
+
+    /**
+     * Tests that the source file contains implementation loader registration.
+     *
+     * The ExtendedBlock data type must be registered with Pimcore's implementation
+     * loader to enable class definition import/export.
+     */
+    public function testExtensionRegistersImplementationLoader(): void
+    {
+        $sourceFile = __DIR__ . '/../../../../../../src/DependencyInjection/ExtendedBlockExtension.php';
+        $this->assertFileExists($sourceFile, 'ExtendedBlockExtension.php should exist');
+
+        $content = file_get_contents($sourceFile);
+
+        // Check that it implements PrependExtensionInterface
+        $this->assertStringContainsString(
+            'PrependExtensionInterface',
+            $content,
+            'Extension should implement PrependExtensionInterface'
+        );
+
+        // Check for implementation loader registration
+        $this->assertStringContainsString(
+            'prependExtensionConfig',
+            $content,
+            'Extension should use prependExtensionConfig for registration'
+        );
+
+        // Check for extendedBlock mapping
+        $this->assertStringContainsString(
+            'extendedBlock',
+            $content,
+            'Extension should register extendedBlock data type'
+        );
+
+        // Check for class_definitions configuration
+        $this->assertStringContainsString(
+            'class_definitions',
+            $content,
+            'Extension should configure class_definitions'
+        );
+    }
 }

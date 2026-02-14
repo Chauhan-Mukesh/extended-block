@@ -12,9 +12,11 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\DependencyInjection;
 
+use ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
+use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 
 /**
@@ -23,9 +25,12 @@ use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
  * This class handles the loading of service configurations and
  * bundle parameters into the Symfony dependency injection container.
  *
+ * Also registers the ExtendedBlock data type with Pimcore's implementation loader
+ * to enable proper class definition import/export from JSON.
+ *
  * @see https://symfony.com/doc/current/bundles/extension.html
  */
-class ExtendedBlockExtension extends Extension
+class ExtendedBlockExtension extends Extension implements PrependExtensionInterface
 {
     /**
      * Loads the bundle configuration into the container.
@@ -49,7 +54,7 @@ class ExtendedBlockExtension extends Extension
         // Load service definitions from YAML configuration
         $loader = new YamlFileLoader(
             $container,
-            new FileLocator(__DIR__.'/../Resources/config')
+            new FileLocator(__DIR__ . '/../Resources/config')
         );
 
         // Load all service configuration files
@@ -70,5 +75,33 @@ class ExtendedBlockExtension extends Extension
     public function getAlias(): string
     {
         return 'extended_block';
+    }
+
+    /**
+     * Prepends configuration to other bundles.
+     *
+     * Registers the ExtendedBlock data type with Pimcore's implementation loader
+     * so that class definitions can be properly imported/exported from JSON.
+     * This is essential for the generateLayoutTreeFromArray() method in
+     * Pimcore\Model\DataObject\ClassDefinition\Service to work correctly.
+     *
+     * @param ContainerBuilder $container The container builder
+     */
+    public function prepend(ContainerBuilder $container): void
+    {
+        // Register ExtendedBlock data type with Pimcore's implementation loader
+        // This allows Pimcore to properly instantiate ExtendedBlock when loading
+        // class definitions from JSON (e.g., during import or cache rebuild)
+        $container->prependExtensionConfig('pimcore', [
+            'objects' => [
+                'class_definitions' => [
+                    'data' => [
+                        'map' => [
+                            'extendedBlock' => ExtendedBlock::class,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
     }
 }

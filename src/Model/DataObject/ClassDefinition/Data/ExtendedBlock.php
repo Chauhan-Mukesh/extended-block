@@ -12,9 +12,11 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data;
 
+use Exception;
 use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockContainer;
 use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockItem;
 use ExtendedBlockBundle\Service\IdentifierValidator;
+use InvalidArgumentException;
 use Pimcore\Db;
 use Pimcore\Logger;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
@@ -165,6 +167,45 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
     protected string $tablePrefix = 'object_eb_';
 
     /**
+     * Returns the list of variables to serialize.
+     *
+     * Excludes runtime caches and computed values that should
+     * be rebuilt on deserialization.
+     *
+     * @return array<string> List of variable names to serialize
+     */
+    public function __serialize(): array
+    {
+        $vars = get_object_vars($this);
+        $blockedVars = $this->getBlockedVarsForExport();
+
+        foreach ($blockedVars as $blockedVar) {
+            unset($vars[$blockedVar]);
+        }
+
+        return array_keys($vars);
+    }
+
+    /**
+     * Creates an instance from exported array data.
+     *
+     * This method is called by PHP when using var_export() to serialize
+     * the class definition. It properly reconstructs the ExtendedBlock
+     * instance including any nested child definitions.
+     *
+     * @param array<string, mixed> $data The exported data array
+     *
+     * @return static The reconstructed ExtendedBlock instance
+     */
+    public static function __set_state(array $data): static
+    {
+        $obj = new static();
+        $obj->setValues($data);
+
+        return $obj;
+    }
+
+    /**
      * Returns the data type name for display.
      *
      * @return string The type name
@@ -191,7 +232,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      */
     public function getPhpdocInputType(): ?string
     {
-        return '\\'.ExtendedBlockContainer::class.'|null';
+        return '\\' . ExtendedBlockContainer::class . '|null';
     }
 
     /**
@@ -201,7 +242,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      */
     public function getPhpdocReturnType(): ?string
     {
-        return '\\'.ExtendedBlockContainer::class.'|null';
+        return '\\' . ExtendedBlockContainer::class . '|null';
     }
 
     /**
@@ -354,109 +395,11 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                     $container->addItem($item);
                 }
             }
-        } catch (\Exception $e) {
-            Logger::error('ExtendedBlock: Error loading block data: '.$e->getMessage());
+        } catch (Exception $e) {
+            Logger::error('ExtendedBlock: Error loading block data: ' . $e->getMessage());
         }
 
         return $container;
-    }
-
-    /**
-     * Creates a block item from a database row.
-     *
-     * @param array<string, mixed> $row    The database row
-     * @param Concrete             $object The parent object
-     *
-     * @return ExtendedBlockItem|null The created block item
-     */
-    protected function createBlockItemFromRow(array $row, Concrete $object): ?ExtendedBlockItem
-    {
-        $type = $row['type'] ?? 'default';
-        $index = (int) ($row['index'] ?? 0);
-
-        $item = new ExtendedBlockItem(
-            type: $type,
-            index: $index,
-            object: $object,
-            fieldname: $this->getName()
-        );
-
-        $item->setId((int) $row['id']);
-
-        // Map row data to item fields based on children field definitions
-        foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
-            if (isset($row[$fieldName])) {
-                // Use the concrete field type's method if available
-                if (method_exists($fieldDef, 'getDataFromResource')) {
-                    $value = $fieldDef->getDataFromResource($row[$fieldName], $object);
-                } else {
-                    $value = $row[$fieldName];
-                }
-                $item->setFieldValue($fieldName, $value);
-            }
-        }
-
-        return $item;
-    }
-
-    /**
-     * Loads localized data for block items.
-     *
-     * @param ExtendedBlockContainer $container The container to populate
-     * @param Concrete               $object    The parent object
-     */
-    protected function loadLocalizedData(ExtendedBlockContainer $container, Concrete $object): void
-    {
-        $localizedTableName = $this->getLocalizedTableName($object->getClassId());
-        $db = Db::get();
-
-        try {
-            // Validate table name before using it
-            IdentifierValidator::validateTableName($localizedTableName);
-
-            // Check if localized table exists (using parameterized query for table name)
-            $tableExists = $db->fetchOne(
-                'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
-                [$localizedTableName]
-            );
-
-            if (!$tableExists) {
-                return;
-            }
-
-            // Load all localized data at once for efficiency
-            $itemIds = array_map(fn ($item) => $item->getId(), $container->getItems());
-            if (empty($itemIds)) {
-                return;
-            }
-
-            // Use quoteIdentifier to safely escape the table name
-            $quotedTable = $db->quoteIdentifier($localizedTableName);
-
-            $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
-            $localizedRows = $db->fetchAllAssociative(
-                "SELECT * FROM {$quotedTable} WHERE ooo_id IN ({$placeholders})",
-                $itemIds
-            );
-
-            // Group by item ID and language
-            $localizedData = [];
-            foreach ($localizedRows as $row) {
-                $itemId = (int) $row['ooo_id'];
-                $language = $row['language'];
-                $localizedData[$itemId][$language] = $row;
-            }
-
-            // Apply localized data to items
-            foreach ($container->getItems() as $item) {
-                $itemId = $item->getId();
-                if (isset($localizedData[$itemId])) {
-                    $item->setLocalizedData($localizedData[$itemId]);
-                }
-            }
-        } catch (\Exception $e) {
-            Logger::error('ExtendedBlock: Error loading localized data: '.$e->getMessage());
-        }
     }
 
     /**
@@ -529,112 +472,10 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
             }
 
             $db->commit();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $db->rollBack();
-            Logger::error('ExtendedBlock: Error saving block data: '.$e->getMessage());
+            Logger::error('ExtendedBlock: Error saving block data: ' . $e->getMessage());
             throw $e;
-        }
-    }
-
-    /**
-     * Saves a single block item to the database.
-     *
-     * @param ExtendedBlockItem         $item      The item to save
-     * @param Concrete                  $object    The parent object
-     * @param int                       $index     The item index/position
-     * @param \Doctrine\DBAL\Connection $db        The database connection
-     * @param string                    $tableName The target table name (already validated)
-     */
-    protected function saveBlockItem(
-        ExtendedBlockItem $item,
-        Concrete $object,
-        int $index,
-        \Doctrine\DBAL\Connection $db,
-        string $tableName,
-    ): void {
-        $data = [
-            'o_id' => $object->getId(),
-            'fieldname' => $this->getName(),
-            'index' => $index,
-            'type' => $item->getType(),
-        ];
-
-        // Add field values based on children field definitions
-        foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
-            if (!$fieldDef instanceof Localizedfields) {
-                $value = $item->getFieldValue($fieldName);
-                // Use the concrete field type's method if available
-                if (method_exists($fieldDef, 'getDataForResource')) {
-                    $data[$fieldName] = $fieldDef->getDataForResource($value, $object);
-                } else {
-                    $data[$fieldName] = $value;
-                }
-            }
-        }
-
-        // DBAL's insert method uses parameterized queries, which is safe
-        $db->insert($tableName, $data);
-        $item->setId((int) $db->lastInsertId());
-    }
-
-    /**
-     * Saves localized data for all block items.
-     *
-     * @param ExtendedBlockContainer $container The container with items
-     * @param Concrete               $object    The parent object
-     */
-    protected function saveLocalizedData(ExtendedBlockContainer $container, Concrete $object): void
-    {
-        $localizedTableName = $this->getLocalizedTableName($object->getClassId());
-        $db = Db::get();
-
-        // Validate table name before using it
-        IdentifierValidator::validateTableName($localizedTableName);
-
-        // Ensure localized table exists
-        $this->ensureLocalizedTableExists($object->getClassId());
-
-        // Use quoteIdentifier to safely escape the table name
-        $quotedTable = $db->quoteIdentifier($localizedTableName);
-
-        // Delete existing localized data
-        $itemIds = array_map(fn ($item) => $item->getId(), $container->getItems());
-        if (!empty($itemIds)) {
-            $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
-            $db->executeStatement(
-                "DELETE FROM {$quotedTable} WHERE ooo_id IN ({$placeholders})",
-                $itemIds
-            );
-        }
-
-        // Get available languages from Pimcore configuration
-        $languages = \Pimcore\Tool::getValidLanguages();
-
-        // Insert localized data for each item and language
-        foreach ($container->getItems() as $item) {
-            $localizedData = $item->getLocalizedData();
-            if (empty($localizedData)) {
-                continue;
-            }
-
-            foreach ($languages as $language) {
-                if (!isset($localizedData[$language])) {
-                    continue;
-                }
-
-                $data = [
-                    'ooo_id' => $item->getId(),
-                    'language' => $language,
-                ];
-
-                // LocalizedFields are no longer supported in ExtendedBlock.
-                // This code path is maintained for backward compatibility with
-                // existing installations that may have localized data.
-                Logger::debug('ExtendedBlock: saveLocalizedData called - this is deprecated functionality');
-
-                // DBAL's insert method uses parameterized queries, which is safe
-                $db->insert($localizedTableName, $data);
-            }
         }
     }
 
@@ -699,8 +540,8 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                 "DELETE FROM {$quotedTable} WHERE o_id = ? AND fieldname = ?",
                 [$object->getId(), $this->getName()]
             );
-        } catch (\Exception $e) {
-            Logger::error('ExtendedBlock: Error deleting block data: '.$e->getMessage());
+        } catch (Exception $e) {
+            Logger::error('ExtendedBlock: Error deleting block data: ' . $e->getMessage());
         }
     }
 
@@ -709,16 +550,16 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      *
      * @param string $classId The class ID
      *
-     * @return string The validated table name
+     * @throws InvalidArgumentException If classId is invalid
      *
-     * @throws \InvalidArgumentException If classId is invalid
+     * @return string The validated table name
      */
     public function getTableName(string $classId): string
     {
         // Validate classId before constructing the table name
         IdentifierValidator::validateClassId($classId);
 
-        $tableName = $this->tablePrefix.$classId.'_'.$this->getName();
+        $tableName = $this->tablePrefix . $classId . '_' . $this->getName();
 
         // Validate the full table name as well
         IdentifierValidator::validateTableName($tableName);
@@ -731,128 +572,18 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      *
      * @param string $classId The class ID
      *
-     * @return string The validated localized table name
+     * @throws InvalidArgumentException If classId is invalid
      *
-     * @throws \InvalidArgumentException If classId is invalid
+     * @return string The validated localized table name
      */
     public function getLocalizedTableName(string $classId): string
     {
-        $tableName = $this->getTableName($classId).'_localized';
+        $tableName = $this->getTableName($classId) . '_localized';
 
         // Validate the full localized table name
         IdentifierValidator::validateTableName($tableName);
 
         return $tableName;
-    }
-
-    /**
-     * Ensures the main block table exists.
-     *
-     * Creates the table if it doesn't exist, with all required columns
-     * based on the block definitions.
-     *
-     * @param string $classId The class ID
-     */
-    protected function ensureTableExists(string $classId): void
-    {
-        // getTableName() validates classId and tableName
-        $tableName = $this->getTableName($classId);
-        $db = Db::get();
-
-        // Check if table already exists (parameterized query)
-        $tableExists = $db->fetchOne(
-            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
-            [$tableName]
-        );
-
-        if ($tableExists) {
-            return;
-        }
-
-        // Use quoteIdentifier to safely escape the table name
-        $quotedTable = $db->quoteIdentifier($tableName);
-
-        // Build CREATE TABLE statement
-        $columns = [
-            '`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT',
-            '`o_id` INT(11) UNSIGNED NOT NULL',
-            '`fieldname` VARCHAR(70) NOT NULL',
-            '`index` INT(11) UNSIGNED NOT NULL DEFAULT 0',
-            '`type` VARCHAR(100) NOT NULL DEFAULT "default"',
-        ];
-
-        // Add columns for each field in children definitions
-        foreach ($this->getFieldDefinitions() as $fieldDef) {
-            if (!$fieldDef instanceof Localizedfields) {
-                // Use method_exists to safely call getColumnType
-                if (method_exists($fieldDef, 'getColumnType')) {
-                    $columnType = $fieldDef->getColumnType();
-                    if ($columnType) {
-                        // Validate field name before using it as column name
-                        $fieldName = $fieldDef->getName();
-                        IdentifierValidator::validateColumnName($fieldName);
-                        $quotedColumn = $db->quoteIdentifier($fieldName);
-                        $columns[] = "{$quotedColumn} {$columnType}";
-                    }
-                }
-            }
-        }
-
-        $columns[] = 'PRIMARY KEY (`id`)';
-        $columns[] = 'INDEX `o_id` (`o_id`)';
-        $columns[] = 'INDEX `fieldname` (`fieldname`)';
-        $columns[] = 'INDEX `type` (`type`)';
-
-        $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-
-        $db->executeStatement($sql);
-    }
-
-    /**
-     * Ensures the localized block table exists.
-     *
-     * Creates the localized table if it doesn't exist, with columns
-     * for localized field definitions.
-     *
-     * @param string $classId The class ID
-     */
-    protected function ensureLocalizedTableExists(string $classId): void
-    {
-        // getLocalizedTableName() validates via getTableName()
-        $tableName = $this->getLocalizedTableName($classId);
-        $db = Db::get();
-
-        // Check if table already exists (parameterized query)
-        $tableExists = $db->fetchOne(
-            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
-            [$tableName]
-        );
-
-        if ($tableExists) {
-            return;
-        }
-
-        // Use quoteIdentifier to safely escape the table name
-        $quotedTable = $db->quoteIdentifier($tableName);
-
-        // Build CREATE TABLE statement
-        $columns = [
-            '`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT',
-            '`ooo_id` INT(11) UNSIGNED NOT NULL',
-            '`language` VARCHAR(10) NOT NULL',
-        ];
-
-        // Note: LocalizedFields not allowed in ExtendedBlock, so this table
-        // will have only base columns. Kept for backward compatibility.
-
-        $columns[] = 'PRIMARY KEY (`id`)';
-        $columns[] = 'INDEX `ooo_id` (`ooo_id`)';
-        $columns[] = 'INDEX `language` (`language`)';
-        $columns[] = 'UNIQUE KEY `ooo_id_language` (`ooo_id`, `language`)';
-
-        $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-
-        $db->executeStatement($sql);
     }
 
     /**
@@ -866,40 +597,40 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      * - No Objectbricks inside ExtendedBlock
      * - No LocalizedFields inside ExtendedBlock
      *
-     * @throws \Exception If validation fails
+     * @throws Exception If validation fails
      */
     public function validate(): void
     {
         // Check for nested ExtendedBlock in LocalizedFields
         if ($this->disallowAddingInLocalizedField) {
-            throw new \Exception('ExtendedBlock with localized fields cannot be added inside a LocalizedFields container. This would create an infinite recursion. Please restructure your class definition.');
+            throw new Exception('ExtendedBlock with localized fields cannot be added inside a LocalizedFields container. This would create an infinite recursion. Please restructure your class definition.');
         }
 
         // Validate children field definitions
         foreach ($this->children as $field) {
             // Check for nested ExtendedBlock
             if ($field instanceof self) {
-                throw new \Exception('ExtendedBlock cannot contain another ExtendedBlock.');
+                throw new Exception('ExtendedBlock cannot contain another ExtendedBlock.');
             }
 
             // Check for Block inside ExtendedBlock
             if ($field instanceof Block) {
-                throw new \Exception('ExtendedBlock cannot contain a Block. Block nesting is not supported to ensure data integrity and prevent performance issues.');
+                throw new Exception('ExtendedBlock cannot contain a Block. Block nesting is not supported to ensure data integrity and prevent performance issues.');
             }
 
             // Check for Fieldcollections inside ExtendedBlock
             if ($field instanceof Fieldcollections) {
-                throw new \Exception('ExtendedBlock cannot contain Fieldcollections. Fieldcollections are complex container types that cannot be nested inside ExtendedBlock.');
+                throw new Exception('ExtendedBlock cannot contain Fieldcollections. Fieldcollections are complex container types that cannot be nested inside ExtendedBlock.');
             }
 
             // Check for Objectbricks inside ExtendedBlock
             if ($field instanceof Objectbricks) {
-                throw new \Exception('ExtendedBlock cannot contain Objectbricks. Objectbricks are complex container types that cannot be nested inside ExtendedBlock.');
+                throw new Exception('ExtendedBlock cannot contain Objectbricks. Objectbricks are complex container types that cannot be nested inside ExtendedBlock.');
             }
 
             // Check for LocalizedFields inside ExtendedBlock
             if ($field instanceof Localizedfields) {
-                throw new \Exception('ExtendedBlock cannot contain LocalizedFields. Localized fields are not supported inside ExtendedBlock.');
+                throw new Exception('ExtendedBlock cannot contain LocalizedFields. Localized fields are not supported inside ExtendedBlock.');
             }
         }
     }
@@ -1125,7 +856,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      */
     public function getParameterTypeDeclaration(): ?string
     {
-        return '?\\'.ExtendedBlockContainer::class;
+        return '?\\' . ExtendedBlockContainer::class;
     }
 
     /**
@@ -1135,7 +866,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      */
     public function getReturnTypeDeclaration(): ?string
     {
-        return '?\\'.ExtendedBlockContainer::class;
+        return '?\\' . ExtendedBlockContainer::class;
     }
 
     /**
@@ -1145,7 +876,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      */
     public function getPhpType(): ?string
     {
-        return '\\'.ExtendedBlockContainer::class.'|null';
+        return '\\' . ExtendedBlockContainer::class . '|null';
     }
 
     /**
@@ -1423,5 +1154,331 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
     public function setFieldDefinitions(?array $definitions): void
     {
         $this->fieldDefinitionsCache = $definitions;
+    }
+
+    /**
+     * Returns variables that should be excluded from export.
+     *
+     * These variables are runtime caches or computed values that
+     * don't need to be persisted and should be rebuilt on load.
+     *
+     * @return array<string> List of blocked variable names
+     */
+    public function getBlockedVarsForExport(): array
+    {
+        return [
+            'fieldDefinitionsCache',
+            'blockedVarsForExport',
+        ];
+    }
+
+    /**
+     * Creates a block item from a database row.
+     *
+     * @param array<string, mixed> $row    The database row
+     * @param Concrete             $object The parent object
+     *
+     * @return ExtendedBlockItem|null The created block item
+     */
+    protected function createBlockItemFromRow(array $row, Concrete $object): ?ExtendedBlockItem
+    {
+        $type = $row['type'] ?? 'default';
+        $index = (int) ($row['index'] ?? 0);
+
+        $item = new ExtendedBlockItem(
+            type: $type,
+            index: $index,
+            object: $object,
+            fieldname: $this->getName()
+        );
+
+        $item->setId((int) $row['id']);
+
+        // Map row data to item fields based on children field definitions
+        foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
+            if (isset($row[$fieldName])) {
+                // Use the concrete field type's method if available
+                if (method_exists($fieldDef, 'getDataFromResource')) {
+                    $value = $fieldDef->getDataFromResource($row[$fieldName], $object);
+                } else {
+                    $value = $row[$fieldName];
+                }
+                $item->setFieldValue($fieldName, $value);
+            }
+        }
+
+        return $item;
+    }
+
+    /**
+     * Loads localized data for block items.
+     *
+     * @param ExtendedBlockContainer $container The container to populate
+     * @param Concrete               $object    The parent object
+     */
+    protected function loadLocalizedData(ExtendedBlockContainer $container, Concrete $object): void
+    {
+        $localizedTableName = $this->getLocalizedTableName($object->getClassId());
+        $db = Db::get();
+
+        try {
+            // Validate table name before using it
+            IdentifierValidator::validateTableName($localizedTableName);
+
+            // Check if localized table exists (using parameterized query for table name)
+            $tableExists = $db->fetchOne(
+                'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
+                [$localizedTableName]
+            );
+
+            if (!$tableExists) {
+                return;
+            }
+
+            // Load all localized data at once for efficiency
+            $itemIds = array_map(static fn ($item) => $item->getId(), $container->getItems());
+            if (empty($itemIds)) {
+                return;
+            }
+
+            // Use quoteIdentifier to safely escape the table name
+            $quotedTable = $db->quoteIdentifier($localizedTableName);
+
+            $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+            $localizedRows = $db->fetchAllAssociative(
+                "SELECT * FROM {$quotedTable} WHERE ooo_id IN ({$placeholders})",
+                $itemIds
+            );
+
+            // Group by item ID and language
+            $localizedData = [];
+            foreach ($localizedRows as $row) {
+                $itemId = (int) $row['ooo_id'];
+                $language = $row['language'];
+                $localizedData[$itemId][$language] = $row;
+            }
+
+            // Apply localized data to items
+            foreach ($container->getItems() as $item) {
+                $itemId = $item->getId();
+                if (isset($localizedData[$itemId])) {
+                    $item->setLocalizedData($localizedData[$itemId]);
+                }
+            }
+        } catch (Exception $e) {
+            Logger::error('ExtendedBlock: Error loading localized data: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Saves a single block item to the database.
+     *
+     * @param ExtendedBlockItem         $item      The item to save
+     * @param Concrete                  $object    The parent object
+     * @param int                       $index     The item index/position
+     * @param \Doctrine\DBAL\Connection $db        The database connection
+     * @param string                    $tableName The target table name (already validated)
+     */
+    protected function saveBlockItem(
+        ExtendedBlockItem $item,
+        Concrete $object,
+        int $index,
+        \Doctrine\DBAL\Connection $db,
+        string $tableName,
+    ): void {
+        $data = [
+            'o_id' => $object->getId(),
+            'fieldname' => $this->getName(),
+            'index' => $index,
+            'type' => $item->getType(),
+        ];
+
+        // Add field values based on children field definitions
+        foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
+            if (!$fieldDef instanceof Localizedfields) {
+                $value = $item->getFieldValue($fieldName);
+                // Use the concrete field type's method if available
+                if (method_exists($fieldDef, 'getDataForResource')) {
+                    $data[$fieldName] = $fieldDef->getDataForResource($value, $object);
+                } else {
+                    $data[$fieldName] = $value;
+                }
+            }
+        }
+
+        // DBAL's insert method uses parameterized queries, which is safe
+        $db->insert($tableName, $data);
+        $item->setId((int) $db->lastInsertId());
+    }
+
+    /**
+     * Saves localized data for all block items.
+     *
+     * @param ExtendedBlockContainer $container The container with items
+     * @param Concrete               $object    The parent object
+     */
+    protected function saveLocalizedData(ExtendedBlockContainer $container, Concrete $object): void
+    {
+        $localizedTableName = $this->getLocalizedTableName($object->getClassId());
+        $db = Db::get();
+
+        // Validate table name before using it
+        IdentifierValidator::validateTableName($localizedTableName);
+
+        // Ensure localized table exists
+        $this->ensureLocalizedTableExists($object->getClassId());
+
+        // Use quoteIdentifier to safely escape the table name
+        $quotedTable = $db->quoteIdentifier($localizedTableName);
+
+        // Delete existing localized data
+        $itemIds = array_map(static fn ($item) => $item->getId(), $container->getItems());
+        if (!empty($itemIds)) {
+            $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+            $db->executeStatement(
+                "DELETE FROM {$quotedTable} WHERE ooo_id IN ({$placeholders})",
+                $itemIds
+            );
+        }
+
+        // Get available languages from Pimcore configuration
+        $languages = \Pimcore\Tool::getValidLanguages();
+
+        // Insert localized data for each item and language
+        foreach ($container->getItems() as $item) {
+            $localizedData = $item->getLocalizedData();
+            if (empty($localizedData)) {
+                continue;
+            }
+
+            foreach ($languages as $language) {
+                if (!isset($localizedData[$language])) {
+                    continue;
+                }
+
+                $data = [
+                    'ooo_id' => $item->getId(),
+                    'language' => $language,
+                ];
+
+                // LocalizedFields are no longer supported in ExtendedBlock.
+                // This code path is maintained for backward compatibility with
+                // existing installations that may have localized data.
+                Logger::debug('ExtendedBlock: saveLocalizedData called - this is deprecated functionality');
+
+                // DBAL's insert method uses parameterized queries, which is safe
+                $db->insert($localizedTableName, $data);
+            }
+        }
+    }
+
+    /**
+     * Ensures the main block table exists.
+     *
+     * Creates the table if it doesn't exist, with all required columns
+     * based on the block definitions.
+     *
+     * @param string $classId The class ID
+     */
+    protected function ensureTableExists(string $classId): void
+    {
+        // getTableName() validates classId and tableName
+        $tableName = $this->getTableName($classId);
+        $db = Db::get();
+
+        // Check if table already exists (parameterized query)
+        $tableExists = $db->fetchOne(
+            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
+            [$tableName]
+        );
+
+        if ($tableExists) {
+            return;
+        }
+
+        // Use quoteIdentifier to safely escape the table name
+        $quotedTable = $db->quoteIdentifier($tableName);
+
+        // Build CREATE TABLE statement
+        $columns = [
+            '`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT',
+            '`o_id` INT(11) UNSIGNED NOT NULL',
+            '`fieldname` VARCHAR(70) NOT NULL',
+            '`index` INT(11) UNSIGNED NOT NULL DEFAULT 0',
+            '`type` VARCHAR(100) NOT NULL DEFAULT "default"',
+        ];
+
+        // Add columns for each field in children definitions
+        foreach ($this->getFieldDefinitions() as $fieldDef) {
+            if (!$fieldDef instanceof Localizedfields) {
+                // Use method_exists to safely call getColumnType
+                if (method_exists($fieldDef, 'getColumnType')) {
+                    $columnType = $fieldDef->getColumnType();
+                    if ($columnType) {
+                        // Validate field name before using it as column name
+                        $fieldName = $fieldDef->getName();
+                        IdentifierValidator::validateColumnName($fieldName);
+                        $quotedColumn = $db->quoteIdentifier($fieldName);
+                        $columns[] = "{$quotedColumn} {$columnType}";
+                    }
+                }
+            }
+        }
+
+        $columns[] = 'PRIMARY KEY (`id`)';
+        $columns[] = 'INDEX `o_id` (`o_id`)';
+        $columns[] = 'INDEX `fieldname` (`fieldname`)';
+        $columns[] = 'INDEX `type` (`type`)';
+
+        $sql = "CREATE TABLE {$quotedTable} (\n" . implode(",\n", $columns) . "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+        $db->executeStatement($sql);
+    }
+
+    /**
+     * Ensures the localized block table exists.
+     *
+     * Creates the localized table if it doesn't exist, with columns
+     * for localized field definitions.
+     *
+     * @param string $classId The class ID
+     */
+    protected function ensureLocalizedTableExists(string $classId): void
+    {
+        // getLocalizedTableName() validates via getTableName()
+        $tableName = $this->getLocalizedTableName($classId);
+        $db = Db::get();
+
+        // Check if table already exists (parameterized query)
+        $tableExists = $db->fetchOne(
+            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
+            [$tableName]
+        );
+
+        if ($tableExists) {
+            return;
+        }
+
+        // Use quoteIdentifier to safely escape the table name
+        $quotedTable = $db->quoteIdentifier($tableName);
+
+        // Build CREATE TABLE statement
+        $columns = [
+            '`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT',
+            '`ooo_id` INT(11) UNSIGNED NOT NULL',
+            '`language` VARCHAR(10) NOT NULL',
+        ];
+
+        // Note: LocalizedFields not allowed in ExtendedBlock, so this table
+        // will have only base columns. Kept for backward compatibility.
+
+        $columns[] = 'PRIMARY KEY (`id`)';
+        $columns[] = 'INDEX `ooo_id` (`ooo_id`)';
+        $columns[] = 'INDEX `language` (`language`)';
+        $columns[] = 'UNIQUE KEY `ooo_id_language` (`ooo_id`, `language`)';
+
+        $sql = "CREATE TABLE {$quotedTable} (\n" . implode(",\n", $columns) . "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+        $db->executeStatement($sql);
     }
 }

@@ -12,3 +12,9 @@ parameters:
         -
             message: '#Call to method.*on an unknown class Pimcore\\.*#'
             reportUnmatched: false
+        # __set_state is a standard PHP pattern for var_export serialization
+        # The static constructor is safe here because ExtendedBlock is a final-like class
+        -
+            message: '#Unsafe usage of new static\(\)#'
+            path: src/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php
+            count: 1

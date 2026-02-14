@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle - ExtendedBlockItem Unit Test
+ * Extended Block Bundle - ExtendedBlockItem Unit Test.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
@@ -13,8 +12,8 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\Tests\Unit\Model\DataObject\Data;
 
-use PHPUnit\Framework\TestCase;
 use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockItem;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Test cases for ExtendedBlockItem class.
@@ -31,8 +30,6 @@ class ExtendedBlockItemTest extends TestCase
 {
     /**
      * Tests creating an item with default values.
-     *
-     * @return void
      */
     public function testDefaultValues(): void
     {
@@ -49,8 +46,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests creating an item with custom values.
-     *
-     * @return void
      */
     public function testCustomValues(): void
     {
@@ -65,8 +60,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests setting and getting field values.
-     *
-     * @return void
      */
     public function testFieldValues(): void
     {
@@ -87,8 +80,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests removing a field value.
-     *
-     * @return void
      */
     public function testRemoveFieldValue(): void
     {
@@ -105,8 +96,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests magic getter and setter.
-     *
-     * @return void
      */
     public function testMagicMethods(): void
     {
@@ -131,8 +120,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests localized data handling.
-     *
-     * @return void
      */
     public function testLocalizedData(): void
     {
@@ -155,8 +142,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests getting localized values for a specific language.
-     *
-     * @return void
      */
     public function testGetLocalizedValuesForLanguage(): void
     {
@@ -176,8 +161,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests clearing localized data for a language.
-     *
-     * @return void
      */
     public function testClearLocalizedData(): void
     {
@@ -194,8 +177,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests setting all localized data at once.
-     *
-     * @return void
      */
     public function testSetLocalizedData(): void
     {
@@ -214,8 +195,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests converting item to array.
-     *
-     * @return void
      */
     public function testToArray(): void
     {
@@ -235,8 +214,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests creating item from array.
-     *
-     * @return void
      */
     public function testFromArray(): void
     {
@@ -265,8 +242,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests the modified flag.
-     *
-     * @return void
      */
     public function testModifiedFlag(): void
     {
@@ -286,8 +261,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests ID getter and setter.
-     *
-     * @return void
      */
     public function testId(): void
     {
@@ -304,8 +277,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests type getter and setter.
-     *
-     * @return void
      */
     public function testType(): void
     {
@@ -319,8 +290,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests index getter and setter.
-     *
-     * @return void
      */
     public function testIndex(): void
     {
@@ -334,8 +303,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests fieldname getter and setter.
-     *
-     * @return void
      */
     public function testFieldname(): void
     {
@@ -349,8 +316,6 @@ class ExtendedBlockItemTest extends TestCase
 
     /**
      * Tests getting all field values.
-     *
-     * @return void
      */
     public function testGetAllFieldValues(): void
     {

@@ -119,6 +119,98 @@ final class ExtendedBlockItem
     }
 
     /**
+     * Magic getter for field values.
+     *
+     * Allows accessing field values as properties:
+     * ```php
+     * $item->title; // equivalent to $item->getFieldValue('title');
+     * ```
+     *
+     * @param string $name The field name
+     *
+     * @return mixed The field value
+     */
+    public function __get(string $name): mixed
+    {
+        return $this->getFieldValue($name);
+    }
+
+    /**
+     * Magic setter for field values.
+     *
+     * Allows setting field values as properties:
+     * ```php
+     * $item->title = 'Hello'; // equivalent to $item->setFieldValue('title', 'Hello');
+     * ```
+     *
+     * @param string $name  The field name
+     * @param mixed  $value The value
+     */
+    public function __set(string $name, mixed $value): void
+    {
+        $this->setFieldValue($name, $value);
+    }
+
+    /**
+     * Magic isset for field values.
+     *
+     * @param string $name The field name
+     *
+     * @return bool True if field exists
+     */
+    public function __isset(string $name): bool
+    {
+        return $this->hasFieldValue($name);
+    }
+
+    /**
+     * Magic unset for field values.
+     *
+     * @param string $name The field name
+     */
+    public function __unset(string $name): void
+    {
+        $this->removeFieldValue($name);
+    }
+
+    /**
+     * Creates an item from array data.
+     *
+     * @param array<string, mixed> $data      The array data
+     * @param Concrete|null        $object    The parent object
+     * @param string               $fieldname The field name
+     *
+     * @return static The created item
+     */
+    public static function fromArray(array $data, ?Concrete $object = null, string $fieldname = ''): static
+    {
+        $item = new static(
+            type: $data['type'] ?? 'default',
+            index: $data['index'] ?? 0,
+            object: $object,
+            fieldname: $fieldname
+        );
+
+        if (isset($data['id'])) {
+            $item->setId((int) $data['id']);
+        }
+
+        if (isset($data['fieldValues']) && is_array($data['fieldValues'])) {
+            foreach ($data['fieldValues'] as $name => $value) {
+                $item->setFieldValue($name, $value);
+            }
+        }
+
+        if (isset($data['localizedData']) && is_array($data['localizedData'])) {
+            $item->setLocalizedData($data['localizedData']);
+        }
+
+        $item->setModified(false);
+
+        return $item;
+    }
+
+    /**
      * Gets a field value by name.
      *
      * @param string $name The field name
@@ -281,61 +373,6 @@ final class ExtendedBlockItem
     }
 
     /**
-     * Magic getter for field values.
-     *
-     * Allows accessing field values as properties:
-     * ```php
-     * $item->title; // equivalent to $item->getFieldValue('title');
-     * ```
-     *
-     * @param string $name The field name
-     *
-     * @return mixed The field value
-     */
-    public function __get(string $name): mixed
-    {
-        return $this->getFieldValue($name);
-    }
-
-    /**
-     * Magic setter for field values.
-     *
-     * Allows setting field values as properties:
-     * ```php
-     * $item->title = 'Hello'; // equivalent to $item->setFieldValue('title', 'Hello');
-     * ```
-     *
-     * @param string $name  The field name
-     * @param mixed  $value The value
-     */
-    public function __set(string $name, mixed $value): void
-    {
-        $this->setFieldValue($name, $value);
-    }
-
-    /**
-     * Magic isset for field values.
-     *
-     * @param string $name The field name
-     *
-     * @return bool True if field exists
-     */
-    public function __isset(string $name): bool
-    {
-        return $this->hasFieldValue($name);
-    }
-
-    /**
-     * Magic unset for field values.
-     *
-     * @param string $name The field name
-     */
-    public function __unset(string $name): void
-    {
-        $this->removeFieldValue($name);
-    }
-
-    /**
      * Converts the item to an array representation.
      *
      * @return array<string, mixed> Array representation
@@ -349,43 +386,6 @@ final class ExtendedBlockItem
             'fieldValues' => $this->fieldValues,
             'localizedData' => $this->localizedData,
         ];
-    }
-
-    /**
-     * Creates an item from array data.
-     *
-     * @param array<string, mixed> $data      The array data
-     * @param Concrete|null        $object    The parent object
-     * @param string               $fieldname The field name
-     *
-     * @return static The created item
-     */
-    public static function fromArray(array $data, ?Concrete $object = null, string $fieldname = ''): static
-    {
-        $item = new static(
-            type: $data['type'] ?? 'default',
-            index: $data['index'] ?? 0,
-            object: $object,
-            fieldname: $fieldname
-        );
-
-        if (isset($data['id'])) {
-            $item->setId((int) $data['id']);
-        }
-
-        if (isset($data['fieldValues']) && is_array($data['fieldValues'])) {
-            foreach ($data['fieldValues'] as $name => $value) {
-                $item->setFieldValue($name, $value);
-            }
-        }
-
-        if (isset($data['localizedData']) && is_array($data['localizedData'])) {
-            $item->setLocalizedData($data['localizedData']);
-        }
-
-        $item->setModified(false);
-
-        return $item;
     }
 
     // Getters and Setters
