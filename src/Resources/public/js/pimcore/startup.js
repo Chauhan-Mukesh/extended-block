@@ -255,6 +255,63 @@ pimcore.plugin.extendedBlock = Class.create({
         if (pimcore.settings && pimcore.settings.devmode) {
             console.log('Extended Block: Patched getRestrictionsFromParent for restriction support');
         }
+        
+        // Patch getAllowedTypes to dynamically add extendedBlock allowed types
+        this.patchGetAllowedTypes();
+    },
+
+    /**
+     * Patches the layout helper's getAllowedTypes function to dynamically
+     * populate the extendedBlock allowed types based on allowIn.extendedBlock.
+     * This mirrors how Pimcore handles localizedfields and block in onTreeNodeContextmenu.
+     */
+    patchGetAllowedTypes: function() {
+        var _this = this;
+        
+        // Store original function
+        var originalGetAllowedTypes = pimcore.object.helpers.layout.getAllowedTypes;
+        
+        if (!originalGetAllowedTypes) {
+            if (pimcore.settings && pimcore.settings.devmode) {
+                console.warn('Extended Block: Could not find getAllowedTypes to patch');
+            }
+            return;
+        }
+        
+        // Wrap getAllowedTypes to add extendedBlock allowed types after the event
+        pimcore.object.helpers.layout.getAllowedTypes = function(source) {
+            // Call the original function first
+            var allowedTypes = originalGetAllowedTypes.call(this, source);
+            
+            // Ensure extendedBlock has an array (it should from our event listener)
+            if (!allowedTypes.extendedBlock) {
+                allowedTypes.extendedBlock = ['data', 'panel', 'tabpanel', 'accordion', 
+                    'fieldset', 'fieldcontainer', 'text', 'region', 'button', 'iframe'];
+            }
+            
+            // Now add data types based on allowIn.extendedBlock (mirroring onTreeNodeContextmenu)
+            // Note: onTreeNodeContextmenu does this for localizedfields and block
+            var dataComps = Object.keys(pimcore.object.classes.data);
+            
+            for (var i = 0; i < dataComps.length; i++) {
+                var dataCompName = dataComps[i];
+                if ('object' === typeof pimcore.object.classes.data[dataCompName]) {
+                    continue;
+                }
+                var component = pimcore.object.classes.data[dataCompName];
+                if (component.prototype.allowIn && component.prototype.allowIn['extendedBlock']) {
+                    if (allowedTypes.extendedBlock.indexOf(dataCompName) === -1) {
+                        allowedTypes.extendedBlock.push(dataCompName);
+                    }
+                }
+            }
+            
+            return allowedTypes;
+        };
+        
+        if (pimcore.settings && pimcore.settings.devmode) {
+            console.log('Extended Block: Patched getAllowedTypes for extendedBlock data type support');
+        }
     },
 
     /**
