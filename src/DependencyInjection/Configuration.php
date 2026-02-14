@@ -24,7 +24,6 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
  * ```yaml
  * extended_block:
  *     table_prefix: 'eb_'
- *     enable_localized_fields: true
  *     strict_mode: true
  * ```
  *
@@ -48,9 +47,9 @@ class Configuration implements ConfigurationInterface
     public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder('extended_block');
-        $rootNode = $treeBuilder->getRootNode();
 
-        $rootNode
+        // @phpstan-ignore-next-line - getRootNode returns ArrayNodeDefinition for named TreeBuilder
+        $treeBuilder->getRootNode()
             ->children()
                 // Table prefix for all extended block tables
                 ->scalarNode('table_prefix')
@@ -63,12 +62,6 @@ class Configuration implements ConfigurationInterface
                         })
                         ->thenInvalid('Table prefix must be a valid SQL identifier (letters, numbers, underscores)')
                     ->end()
-                ->end()
-
-                // Enable or disable localized fields support
-                ->booleanNode('enable_localized_fields')
-                    ->defaultTrue()
-                    ->info('Enable support for localized fields within extended blocks')
                 ->end()
 
                 // Strict mode for validation

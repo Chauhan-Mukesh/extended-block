@@ -26,6 +26,8 @@ use Pimcore\Model\DataObject\Concrete;
  * - Type identification for block variations
  * - Index tracking for ordering within the container
  *
+ * This class is marked as final to ensure type safety with static factory methods.
+ *
  * Usage:
  * ```php
  * $item = new ExtendedBlockItem('text_block', 0);
@@ -39,14 +41,14 @@ use Pimcore\Model\DataObject\Concrete;
  *
  * @see ExtendedBlockContainer
  */
-class ExtendedBlockItem
+final class ExtendedBlockItem
 {
     /**
      * Database ID for this item.
      *
      * This is set after the item is saved to the database.
      */
-    protected ?int $id = null;
+    private ?int $id = null;
 
     /**
      * Block type identifier.
@@ -54,24 +56,24 @@ class ExtendedBlockItem
      * Corresponds to the block type defined in the ExtendedBlock definition.
      * E.g., 'text_block', 'image_block', 'video_block'
      */
-    protected string $type = 'default';
+    private string $type = 'default';
 
     /**
      * Position index within the container.
      *
      * Used for ordering block items. Index starts at 0.
      */
-    protected int $index = 0;
+    private int $index = 0;
 
     /**
      * Reference to the parent object.
      */
-    protected ?Concrete $object = null;
+    private ?Concrete $object = null;
 
     /**
      * Field name of the extended block in the parent object.
      */
-    protected string $fieldname = '';
+    private string $fieldname = '';
 
     /**
      * Storage for non-localized field values.
@@ -80,7 +82,7 @@ class ExtendedBlockItem
      *
      * @var array<string, mixed>
      */
-    protected array $fieldValues = [];
+    private array $fieldValues = [];
 
     /**
      * Storage for localized field values.
@@ -89,12 +91,12 @@ class ExtendedBlockItem
      *
      * @var array<string, array<string, mixed>>
      */
-    protected array $localizedData = [];
+    private array $localizedData = [];
 
     /**
      * Marks this item as modified and needing save.
      */
-    protected bool $modified = false;
+    private bool $modified = false;
 
     /**
      * Creates a new ExtendedBlockItem.

@@ -129,8 +129,40 @@ extended_block:
 1. Open the Pimcore Admin panel
 2. Navigate to **Settings > Data Objects > Classes**
 3. Select or create a class
-4. Add a new field and select **Extended Block** from the data types
-5. Configure the block types and fields in the settings panel
+4. Add a new field by right-clicking in the tree and selecting **Extended Block** from the **Structured** data types section
+5. Configure the field settings (name, title, min/max items, etc.)
+6. Add sub-fields by right-clicking on the ExtendedBlock field and selecting the desired field type
+
+### Adding Sub-fields
+
+ExtendedBlock follows Pimcore's standard Block pattern for adding sub-fields:
+
+1. Right-click on the ExtendedBlock field in the class definition tree
+2. Select a field type from the context menu
+3. Configure the field settings
+
+**Example structure:**
+```
+MyExtendedBlock (ExtendedBlock)
+├── title (Input)
+├── content (WYSIWYG)
+├── description (Textarea)
+└── image (Image)
+```
+
+### Supported Field Types
+
+The following field types can be added as sub-fields:
+- Input
+- Textarea
+- WYSIWYG
+- Numeric
+- Checkbox
+- Date
+- Select
+- Multiselect
+- Link
+- Image
 
 ### Defining Block Types
 

@@ -239,12 +239,12 @@
 }
 
 .extended-block-info {
-    background-color: #d1ecf1;
-    border: 1px solid #bee5eb;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
     border-radius: 4px;
     padding: 10px 14px;
     margin: 0;
-    color: #0c5460;
+    color: #555;
     font-size: 12px;
 }
 
@@ -437,9 +437,9 @@
     }
 
     .extended-block-info {
-        background-color: #1a3d4d;
-        border-color: #2d6b8a;
-        color: #b3e0f2;
+        background-color: #3a3f44;
+        border-color: #5a5f64;
+        color: #d4d4d4;
     }
 
     .extended-block-definitions-grid,
