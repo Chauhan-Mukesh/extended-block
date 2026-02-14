@@ -62,8 +62,11 @@ pimcore.plugin.extendedBlock = Class.create({
         document.addEventListener(pimcore.events.prepareClassLayoutContextMenu, function(e) {
             var allowedTypes = e.detail.allowedTypes;
             
-            // Add extendedBlock as a container type (like block)
-            // Allow simple data types but exclude complex nested types
+            // Add extendedBlock as a container type (like block).
+            // This list follows the same pattern as Pimcore's 'block' type definition.
+            // 'data' allows any data component, layout types allow organizing UI elements.
+            // Complex nested types (localizedfields, block, fieldcollections, objectbricks,
+            // extendedBlock) are excluded via the disallowedDataTypes array and allowIn checks.
             allowedTypes.extendedBlock = ['data', 'panel', 'tabpanel', 'accordion', 
                 'fieldset', 'fieldcontainer', 'text', 'region', 'button', 'iframe'];
         });
@@ -155,7 +158,13 @@ pimcore.plugin.extendedBlock = Class.create({
             return;
         }
         
-        // Patch addDataChild to include extendedBlock as a container type
+        // Patch addDataChild to include extendedBlock as a container type.
+        // NOTE: We replace the entire function rather than extending it because:
+        // 1. The original function is simple and stable (only handles tree node creation)
+        // 2. We need to modify the internal logic (the if condition for container types)
+        // 3. Calling the original would create the node twice, breaking the tree
+        // This implementation mirrors Pimcore's original addDataChild logic exactly,
+        // with the addition of 'extendedBlock' to the container type check.
         pimcore.object.classes.klass.prototype.addDataChild = function(type, initData, context) {
             var nodeLabel = '';
             
@@ -173,7 +182,7 @@ pimcore.plugin.extendedBlock = Class.create({
             };
             
             // Check if type is a container type (including extendedBlock)
-            if (type == "localizedfields" || type == "block" || type == "extendedBlock") {
+            if (type === "localizedfields" || type === "block" || type === "extendedBlock") {
                 newNode.leaf = false;
                 newNode.expanded = true;
                 newNode.expandable = false;
@@ -234,7 +243,7 @@ pimcore.plugin.extendedBlock = Class.create({
             } else {
                 if (node.parentNode && node.parentNode.getDepth() > 0) {
                     var parentType = this.getRestrictionsFromParent(node.parentNode);
-                    if (parentType != null) {
+                    if (parentType !== null) {
                         return parentType;
                     }
                 }

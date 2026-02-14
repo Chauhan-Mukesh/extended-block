@@ -285,11 +285,11 @@
     }
     
     .extended-block-help-text {
-        font-size: 11px;
+        font-size: 12px;
     }
     
     .extended-block-help-text strong {
-        font-size: 12px;
+        font-size: 13px;
     }
 }
 
@@ -299,7 +299,8 @@
     }
     
     .extended-block-help-text {
-        font-size: 10px;
+        /* Maintain minimum 12px for WCAG accessibility */
+        font-size: 12px;
         line-height: 1.4;
     }
 }
