@@ -37,7 +37,7 @@ use Pimcore\Model\DataObject\Concrete;
  *
  * - Better query performance and indexability
  * - Proper relational data model
- * - Support for localized fields within block items
+ * - Per-item localized data storage (via ExtendedBlockItem)
  * - Easier data migration and manipulation
  *
  * Database Structure:
