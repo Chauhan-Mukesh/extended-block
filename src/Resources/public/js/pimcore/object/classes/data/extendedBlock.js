@@ -42,7 +42,8 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
         fieldcollection: false,
         localizedfield: false,
         classificationstore: false,
-        block: false
+        block: false,
+        extendedBlock: false  // Prevent nesting ExtendedBlock inside itself
     },
 
     /**
@@ -228,10 +229,11 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
                 // Info panel about adding fields
                 {
                     xtype: 'panel',
-                    style: 'margin-top: 20px; padding: 10px; background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 4px;',
-                    html: '<div style="color: #555; font-size: 12px;">' +
+                    cls: 'extended-block-info-panel',
+                    style: 'margin-top: 20px;',
+                    html: '<div class="extended-block-help-text">' +
                         '<strong>' + t('add_fields') + ':</strong><br>' +
-                        t('extended_block_fields_help') +
+                        '<span>' + t('extended_block_fields_help') + '</span>' +
                         '</div>'
                 }
             ]

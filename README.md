@@ -138,8 +138,11 @@ extended_block:
 ExtendedBlock follows Pimcore's standard Block pattern for adding sub-fields:
 
 1. Right-click on the ExtendedBlock field in the class definition tree
-2. Select a field type from the context menu
-3. Configure the field settings
+2. Select **"Add data component"** from the context menu
+3. Choose a field type from the submenu (grouped by category: text, numeric, date, etc.)
+4. Configure the field settings in the right panel
+
+> **Note:** The context menu will show "Add data component" with grouped field types. Not all field types are available - complex nested types like LocalizedFields, Block, FieldCollections, ObjectBricks, and ExtendedBlock cannot be added inside ExtendedBlock.
 
 **Example structure:**
 ```
