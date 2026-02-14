@@ -200,18 +200,6 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
     },
 
     /**
-     * Gets the data for saving.
-     * Follows Pimcore pattern: calls $super() which returns this.datax after applyData() has synced values.
-     *
-     * @param {Function} $super - Parent class method
-     * @returns {Object} The configuration data
-     */
-    getData: function($super) {
-        var data = $super();
-        return data;
-    },
-
-    /**
      * Copies specific data from source (used for copy/paste functionality).
      * Follows Pimcore block.js pattern.
      *
