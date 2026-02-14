@@ -27,6 +27,9 @@ use Pimcore\Model\DataObject\ClassDefinition\Data\Localizedfields;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Objectbricks;
 use Pimcore\Model\DataObject\ClassDefinition\Layout;
 use Pimcore\Model\DataObject\Concrete;
+use Pimcore\Model\DataObject\Fieldcollection\Data\AbstractData as FieldcollectionAbstract;
+use Pimcore\Model\DataObject\Localizedfield;
+use Pimcore\Model\DataObject\Objectbrick\Data\AbstractData as ObjectbrickAbstract;
 
 /**
  * Extended Block Data Type Definition.
@@ -57,7 +60,7 @@ use Pimcore\Model\DataObject\Concrete;
  *
  * @see Data
  */
-class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareInterface, Data\LayoutDefinitionEnrichmentInterface, Data\VarExporterInterface
+class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterface, Data\LazyLoadingSupportInterface, Data\LayoutDefinitionEnrichmentInterface, Data\PreGetDataInterface, Data\VarExporterInterface
 {
     /**
      * Data type identifier for Pimcore.
@@ -428,11 +431,16 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      * - Saving localized data to the localized table
      * - Removing deleted items
      *
-     * @param Concrete             $object The parent object being saved
-     * @param array<string, mixed> $params Additional parameters
+     * @param Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object The parent object being saved
+     * @param array<string, mixed>                                                 $params Additional parameters
      */
-    public function save(Concrete $object, array $params = []): void
+    public function save(Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object, array $params = []): void
     {
+        // ExtendedBlock only supports Concrete objects at root level
+        if (!$object instanceof Concrete) {
+            return;
+        }
+
         $container = $object->getValueForFieldName($this->getName());
         if (!$container instanceof ExtendedBlockContainer) {
             return;
@@ -481,15 +489,75 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
     }
 
     /**
+     * Loads block data from the database for an object.
+     *
+     * Called when the parent object is loaded. This is the CustomResourcePersistingInterface
+     * method that Pimcore calls to load data stored in custom tables.
+     *
+     * @param Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object The object being loaded
+     * @param array<string, mixed>                                                 $params Additional parameters
+     *
+     * @return ExtendedBlockContainer|null The loaded block container or null
+     */
+    public function load(Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object, array $params = []): ?ExtendedBlockContainer
+    {
+        // ExtendedBlock only supports Concrete objects at root level
+        if (!$object instanceof Concrete) {
+            return null;
+        }
+
+        return $this->loadBlockData($object);
+    }
+
+    /**
+     * Pre-processes data when getting from an object.
+     *
+     * This method handles lazy loading - if the data hasn't been loaded yet
+     * and lazy loading is enabled, it loads the data from the database.
+     *
+     * Required by PreGetDataInterface.
+     *
+     * @param mixed                $container The container (Concrete object)
+     * @param array<string, mixed> $params    Additional parameters
+     *
+     * @return ExtendedBlockContainer|null The loaded block container
+     */
+    public function preGetData(mixed $container, array $params = []): mixed
+    {
+        // ExtendedBlock only supports Concrete objects at root level
+        if (!$container instanceof Concrete) {
+            return null;
+        }
+
+        $data = $container->getObjectVar($this->getName());
+        if ($this->getLazyLoading() && !$container->isLazyKeyLoaded($this->getName())) {
+            $data = $this->load($container);
+
+            $setter = 'set' . ucfirst($this->getName());
+            if (method_exists($container, $setter)) {
+                $container->$setter($data);
+            }
+            $container->markLazyKeyAsLoaded($this->getName());
+        }
+
+        return $data;
+    }
+
+    /**
      * Deletes all block data for an object.
      *
      * Called when the parent object is deleted.
      *
-     * @param Concrete             $object The object being deleted
-     * @param array<string, mixed> $params Additional parameters
+     * @param Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object The object being deleted
+     * @param array<string, mixed>                                                 $params Additional parameters
      */
-    public function delete(Concrete $object, array $params = []): void
+    public function delete(Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object, array $params = []): void
     {
+        // ExtendedBlock only supports Concrete objects at root level
+        if (!$object instanceof Concrete) {
+            return;
+        }
+
         $db = Db::get();
         $tableName = $this->getTableName($object->getClassId());
 
@@ -1020,6 +1088,18 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
     }
 
     public function isLazyLoading(): bool
+    {
+        return $this->lazyLoading;
+    }
+
+    /**
+     * Returns whether lazy loading is enabled.
+     *
+     * Required by LazyLoadingSupportInterface.
+     *
+     * @return bool True if lazy loading is enabled
+     */
+    public function getLazyLoading(): bool
     {
         return $this->lazyLoading;
     }
