@@ -5,7 +5,7 @@
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.0-8892BF.svg)](https://php.net/)
 [![Pimcore Version](https://img.shields.io/badge/pimcore-%3E%3D10.0-00ADD8.svg)](https://pimcore.com/)
 
-A Pimcore bundle that extends the block data type by storing data in separate database tables instead of serialized JSON in a single column. This provides better performance, queryability, and proper relational data modeling.
+A Pimcore bundle that extends the block data type by storing data in separate database tables instead of serialized JSON in a single column. This provides better performance, queryability, and proper relational data modeling while maintaining the same UI/UX experience as Pimcore's native block field.
 
 ## 📋 Table of Contents
 
@@ -17,6 +17,7 @@ A Pimcore bundle that extends the block data type by storing data in separate da
 - [PHP API](#-php-api)
 - [Architecture](#-architecture)
 - [Database Schema](#-database-schema)
+- [Field Restrictions](#-field-restrictions)
 - [Block Nesting Rules](#-block-nesting-rules)
 - [API Reference](#-api-reference)
 - [Testing](#-testing)
@@ -28,14 +29,15 @@ A Pimcore bundle that extends the block data type by storing data in separate da
 ## ✨ Features
 
 - **Separate Table Storage**: Each extended block stores data in dedicated database tables, similar to field collections
+- **SQL Queryable**: Unlike standard blocks that use serialized JSON, extended block data can be queried using SQL
 - **Better Performance**: Eliminates serialization overhead and enables efficient database queries
-- **Full Queryability**: Block data can be queried directly using SQL
+- **Pimcore-style UI/UX**: Follows Pimcore's native block UI patterns with inline controls (add before/after, delete, move up/down)
+- **Responsive Design**: Fully responsive interface with auto-adjusting height/width, transitions, and animations
+- **Multiple Block Types**: Define multiple block types with different field configurations
 - **Nesting Prevention**: Automatic validation prevents invalid block nesting configurations
 - **Safe Schema Updates**: New fields can be added without data loss; removed fields preserve existing data
 - **Lazy Loading**: Optional lazy loading for improved performance with large datasets
-- **Complete Admin UI**: Full Pimcore admin integration with drag-and-drop ordering
-- **Multiple Block Types**: Define multiple block types with different field configurations
-- **Migration Tools**: Tools for migrating from standard Block type
+- **Dark Mode Support**: CSS supports dark mode when the browser prefers dark color scheme
 
 ## 📦 Requirements
 
@@ -370,6 +372,35 @@ CREATE TABLE `object_eb_{classId}_{fieldName}` (
 );
 ```
 
+## 🚫 Field Restrictions
+
+ExtendedBlock has specific field restrictions to ensure data integrity and prevent storage complexity issues. The following field types **cannot** be used within ExtendedBlock items:
+
+| Field Type | Reason |
+|------------|--------|
+| LocalizedFields | Complex table relationships would break storage logic |
+| Block | Standard Block uses serialized JSON storage mechanism |
+| FieldCollections | Complex container types cannot be nested |
+| ObjectBricks | Complex container types cannot be nested |
+| ExtendedBlock | Would cause infinite recursion |
+
+### Supported Field Types
+
+ExtendedBlock supports the following simple field types:
+
+| Field Type | Description |
+|------------|-------------|
+| Input | Single-line text input |
+| Textarea | Multi-line text input |
+| WYSIWYG | Rich text editor |
+| Numeric | Number input |
+| Checkbox | Boolean toggle |
+| Date | Date picker |
+| Select | Dropdown selection |
+| Multiselect | Multi-value selection |
+| Link | URL input |
+| Image | Asset image selector |
+
 ## 🚫 Placement and Nesting Rules
 
 ExtendedBlock can **only** be placed at the root level of a class definition. To ensure data integrity and prevent performance issues, the following configurations are **not allowed**:
@@ -404,6 +435,7 @@ ExtendedBlock can **only** be placed at the root level of a class definition. To
 | Block | Standard Block uses different storage mechanism |
 | Fieldcollections | Complex container types cannot be nested |
 | Objectbricks | Complex container types cannot be nested |
+| LocalizedFields | Complex table relationships would break storage logic |
 
 ### Examples
 
