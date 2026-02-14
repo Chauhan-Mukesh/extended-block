@@ -6,5 +6,9 @@ parameters:
         - src/Resources/public/*
     ignoreErrors:
         # Pimcore classes may not be available during static analysis
-        - '#Class Pimcore\\.*not found#'
-        - '#Call to method.*on an unknown class Pimcore\\.*#'
+        -
+            message: '#Class Pimcore\\.*not found#'
+            reportUnmatched: false
+        -
+            message: '#Call to method.*on an unknown class Pimcore\\.*#'
+            reportUnmatched: false

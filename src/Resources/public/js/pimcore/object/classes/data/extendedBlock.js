@@ -38,11 +38,11 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
      */
     allowIn: {
         object: true,
-        objectbrick: true,
-        fieldcollection: true,
-        localizedfield: true,
+        objectbrick: false,
+        fieldcollection: false,
+        localizedfield: false,
         classificationstore: false,
-        block: false  // ExtendedBlock cannot be nested in Block
+        block: false
     },
 
     /**
@@ -50,11 +50,11 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
      * @type {Array}
      */
     disallowedDataTypes: [
-        'localizedfields',  // Localized fields not supported
-        'block',            // No nested blocks
-        'fieldcollections', // No field collections
-        'objectbricks',     // No object bricks
-        'extendedBlock'     // No nested extended blocks
+        'localizedfields',
+        'block',
+        'fieldcollections',
+        'objectbricks',
+        'extendedBlock'
     ],
 
     /**
@@ -75,16 +75,27 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
      * @returns {string} The type name
      */
     getTypeName: function() {
-        return t('extended_block') || 'Extended Block';
+        return t('extended_block');
     },
 
     /**
      * Returns the icon class for this data type.
+     * Uses a distinct icon different from the standard Block.
      *
      * @returns {string} The icon class
      */
     getIconClass: function() {
-        return 'pimcore_icon_block';
+        return 'pimcore_icon_objectbricks';
+    },
+
+    /**
+     * Returns the group this data type belongs to.
+     * ExtendedBlock is in the "structured" group like Block, FieldCollections, etc.
+     *
+     * @returns {string} The group name
+     */
+    getGroup: function() {
+        return 'structured';
     },
 
     /**
@@ -178,7 +189,7 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
                 // Min items
                 {
                     xtype: 'numberfield',
-                    fieldLabel: t('minimum_items') || 'Minimum Items',
+                    fieldLabel: t('minimum_items'),
                     name: 'minItems',
                     value: this.datax.minItems || 0,
                     minValue: 0,
@@ -187,7 +198,7 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
                 // Max items
                 {
                     xtype: 'numberfield',
-                    fieldLabel: t('maximum_items') || 'Maximum Items',
+                    fieldLabel: t('maximum_items'),
                     name: 'maxItems',
                     value: this.datax.maxItems,
                     minValue: 0,
@@ -203,14 +214,14 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
                 // Collapsed by default
                 {
                     xtype: 'checkbox',
-                    fieldLabel: t('collapsed_by_default') || 'Collapsed by Default',
+                    fieldLabel: t('collapsed_by_default'),
                     name: 'collapsed',
                     checked: this.datax.collapsed === true
                 },
                 // Lazy loading
                 {
                     xtype: 'checkbox',
-                    fieldLabel: t('lazy_loading') || 'Lazy Loading',
+                    fieldLabel: t('lazy_loading'),
                     name: 'lazyLoading',
                     checked: this.datax.lazyLoading !== false
                 },
@@ -219,10 +230,8 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
                     xtype: 'panel',
                     style: 'margin-top: 20px; padding: 10px; background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 4px;',
                     html: '<div style="color: #555; font-size: 12px;">' +
-                        '<strong>' + (t('add_fields') || 'Add Fields') + ':</strong><br>' +
-                        (t('extended_block_fields_help') || 'Right-click on this field in the tree to add sub-fields. ' +
-                        'Supported field types: Input, Textarea, WYSIWYG, Numeric, Checkbox, Date, Select, Multiselect, Link, Image. ' +
-                        'Note: LocalizedFields, Block, FieldCollections, ObjectBricks, and ExtendedBlock are not allowed as sub-fields.') +
+                        '<strong>' + t('add_fields') + ':</strong><br>' +
+                        t('extended_block_fields_help') +
                         '</div>'
                 }
             ]
@@ -301,13 +310,15 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
     /**
      * Called when a node is appended as child.
      * Validates if the data type is allowed.
+     *
+     * @param {Object} child - The child node being appended
+     * @returns {boolean} True if allowed
      */
     onNodeAppend: function(child) {
         if (!this.isAllowedDataType(child.type)) {
             Ext.MessageBox.alert(
                 t('error'),
-                t('type_not_allowed_in_extended_block') || 
-                'This field type is not allowed inside Extended Block: ' + child.type
+                t('type_not_allowed_in_extended_block') + ': ' + child.type
             );
             return false;
         }

@@ -1,0 +1,12 @@
+# Extended Block Bundle - Admin Translations (English)
+# These translations are used in the Pimcore admin interface.
+
+extended_block: "Extended Block"
+extended_block_fields_help: "Right-click on this field in the tree to add sub-fields. Supported types: Input, Textarea, WYSIWYG, Numeric, Checkbox, Date, Select, Multiselect, Link, Image. LocalizedFields, Block, FieldCollections, ObjectBricks, and ExtendedBlock are not allowed."
+add_fields: "Add Fields"
+type_not_allowed_in_extended_block: "This field type is not allowed inside Extended Block"
+minimum_items: "Minimum Items"
+maximum_items: "Maximum Items"
+collapsed_by_default: "Collapsed by Default"
+lazy_loading: "Lazy Loading"
+limit_reached: "Maximum number of items reached"
