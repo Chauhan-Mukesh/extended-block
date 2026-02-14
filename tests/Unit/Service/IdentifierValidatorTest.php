@@ -5,7 +5,6 @@ declare(strict_types=1);
 /**
  * Extended Block Bundle - Identifier Validator Unit Test.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
@@ -14,6 +13,7 @@ declare(strict_types=1);
 namespace ExtendedBlockBundle\Tests\Unit\Service;
 
 use ExtendedBlockBundle\Service\IdentifierValidator;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -28,6 +28,70 @@ use PHPUnit\Framework\TestCase;
  */
 class IdentifierValidatorTest extends TestCase
 {
+    /**
+     * Data provider for valid identifiers.
+     *
+     * @return array<array<string>>
+     */
+    public static function validIdentifierProvider(): array
+    {
+        return [
+            ['table_name'],
+            ['TableName'],
+            ['_underscore_start'],
+            ['table123'],
+            ['T1'],
+            ['a'],
+            ['_'],
+            ['MyClass'],
+            ['object_eb_MyClass_field'],
+            ['field_name_123'],
+            ['UPPERCASE'],
+            ['mixedCase123'],
+        ];
+    }
+
+    /**
+     * Data provider for invalid identifiers.
+     *
+     * @return array<array<string>>
+     */
+    public static function invalidIdentifierProvider(): array
+    {
+        return [
+            [''],                          // empty
+            ['123table'],                  // starts with number
+            ['table-name'],                // hyphen
+            ['table.name'],                // dot
+            ['table name'],                // space
+            ['table;name'],                // semicolon
+            ["table'name"],                // single quote
+            ['table"name'],                // double quote
+            ['table`name'],                // backtick
+            ['table/*name'],               // comment start
+            ['table*/name'],               // comment end
+            ['table--name'],               // SQL comment
+            ['table(name)'],               // parentheses
+            ['table=name'],                // equals
+            ['table@name'],                // at sign
+            ['table#name'],                // hash
+            ['table$name'],                // dollar sign
+            ['table%name'],                // percent
+            ['table^name'],                // caret
+            ['table&name'],                // ampersand
+            ['table*name'],                // asterisk
+            ['table+name'],                // plus
+            ['table\name'],                // backslash
+            ['table/name'],                // forward slash
+            ['table<name'],                // less than
+            ['table>name'],                // greater than
+            ['table!name'],                // exclamation
+            ['table?name'],                // question mark
+            ["'; DROP TABLE users; --"],   // SQL injection
+            ['1; SELECT * FROM users'],    // SQL injection
+        ];
+    }
+
     /**
      * Tests valid identifiers are accepted.
      *
@@ -63,7 +127,7 @@ class IdentifierValidatorTest extends TestCase
      */
     public function testValidateIdentifierThrowsOnEmpty(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('cannot be empty');
         IdentifierValidator::validateIdentifier('');
     }
@@ -74,7 +138,7 @@ class IdentifierValidatorTest extends TestCase
     public function testValidateIdentifierThrowsOnTooLong(): void
     {
         $longIdentifier = str_repeat('a', 65);
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('exceeds maximum length');
         IdentifierValidator::validateIdentifier($longIdentifier);
     }
@@ -84,7 +148,7 @@ class IdentifierValidatorTest extends TestCase
      */
     public function testValidateIdentifierThrowsOnInvalidChars(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('must contain only letters, numbers, and underscores');
         IdentifierValidator::validateIdentifier('invalid-name');
     }
@@ -180,7 +244,7 @@ class IdentifierValidatorTest extends TestCase
      */
     public function testFieldNameValidationThrowsWithDescription(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid field name');
         IdentifierValidator::validateFieldName('invalid-field');
     }
@@ -190,7 +254,7 @@ class IdentifierValidatorTest extends TestCase
      */
     public function testClassIdValidationThrowsWithDescription(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid class ID');
         IdentifierValidator::validateClassId('invalid class');
     }
@@ -207,69 +271,5 @@ class IdentifierValidatorTest extends TestCase
         // 65 characters should be invalid
         $invalidLength = str_repeat('a', 65);
         $this->assertFalse(IdentifierValidator::isValidIdentifier($invalidLength));
-    }
-
-    /**
-     * Data provider for valid identifiers.
-     *
-     * @return array<array<string>>
-     */
-    public static function validIdentifierProvider(): array
-    {
-        return [
-            ['table_name'],
-            ['TableName'],
-            ['_underscore_start'],
-            ['table123'],
-            ['T1'],
-            ['a'],
-            ['_'],
-            ['MyClass'],
-            ['object_eb_MyClass_field'],
-            ['field_name_123'],
-            ['UPPERCASE'],
-            ['mixedCase123'],
-        ];
-    }
-
-    /**
-     * Data provider for invalid identifiers.
-     *
-     * @return array<array<string>>
-     */
-    public static function invalidIdentifierProvider(): array
-    {
-        return [
-            [''],                          // empty
-            ['123table'],                  // starts with number
-            ['table-name'],                // hyphen
-            ['table.name'],                // dot
-            ['table name'],                // space
-            ['table;name'],                // semicolon
-            ["table'name"],                // single quote
-            ['table"name'],                // double quote
-            ['table`name'],                // backtick
-            ['table/*name'],               // comment start
-            ['table*/name'],               // comment end
-            ['table--name'],               // SQL comment
-            ['table(name)'],               // parentheses
-            ['table=name'],                // equals
-            ['table@name'],                // at sign
-            ['table#name'],                // hash
-            ['table$name'],                // dollar sign
-            ['table%name'],                // percent
-            ['table^name'],                // caret
-            ['table&name'],                // ampersand
-            ['table*name'],                // asterisk
-            ['table+name'],                // plus
-            ['table\name'],                // backslash
-            ['table/name'],                // forward slash
-            ['table<name'],                // less than
-            ['table>name'],                // greater than
-            ['table!name'],                // exclamation
-            ['table?name'],                // question mark
-            ["'; DROP TABLE users; --"],   // SQL injection
-            ['1; SELECT * FROM users'],    // SQL injection
-        ];
     }
 }

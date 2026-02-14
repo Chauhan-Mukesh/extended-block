@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle - ExtendedBlockContainer Unit Test
+ * Extended Block Bundle - ExtendedBlockContainer Unit Test.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
@@ -13,9 +12,10 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\Tests\Unit\Model\DataObject\Data;
 
-use PHPUnit\Framework\TestCase;
 use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockContainer;
 use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockItem;
+use InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Test cases for ExtendedBlockContainer class.
@@ -32,8 +32,6 @@ class ExtendedBlockContainerTest extends TestCase
 {
     /**
      * Tests that a new container is empty.
-     *
-     * @return void
      */
     public function testNewContainerIsEmpty(): void
     {
@@ -46,8 +44,6 @@ class ExtendedBlockContainerTest extends TestCase
 
     /**
      * Tests adding items to the container.
-     *
-     * @return void
      */
     public function testAddItem(): void
     {
@@ -63,8 +59,6 @@ class ExtendedBlockContainerTest extends TestCase
 
     /**
      * Tests adding multiple items.
-     *
-     * @return void
      */
     public function testAddMultipleItems(): void
     {
@@ -86,8 +80,6 @@ class ExtendedBlockContainerTest extends TestCase
 
     /**
      * Tests removing an item from the container.
-     *
-     * @return void
      */
     public function testRemoveItem(): void
     {
@@ -107,8 +99,6 @@ class ExtendedBlockContainerTest extends TestCase
 
     /**
      * Tests the first() method.
-     *
-     * @return void
      */
     public function testFirst(): void
     {
@@ -127,8 +117,6 @@ class ExtendedBlockContainerTest extends TestCase
 
     /**
      * Tests the last() method.
-     *
-     * @return void
      */
     public function testLast(): void
     {
@@ -147,8 +135,6 @@ class ExtendedBlockContainerTest extends TestCase
 
     /**
      * Tests filtering items by type.
-     *
-     * @return void
      */
     public function testGetItemsByType(): void
     {
@@ -173,8 +159,6 @@ class ExtendedBlockContainerTest extends TestCase
 
     /**
      * Tests clearing all items from the container.
-     *
-     * @return void
      */
     public function testClear(): void
     {
@@ -190,8 +174,6 @@ class ExtendedBlockContainerTest extends TestCase
 
     /**
      * Tests the Iterator interface implementation.
-     *
-     * @return void
      */
     public function testIterator(): void
     {
@@ -214,8 +196,6 @@ class ExtendedBlockContainerTest extends TestCase
 
     /**
      * Tests the ArrayAccess interface implementation.
-     *
-     * @return void
      */
     public function testArrayAccess(): void
     {
@@ -234,21 +214,17 @@ class ExtendedBlockContainerTest extends TestCase
 
     /**
      * Tests that ArrayAccess throws exception for invalid values.
-     *
-     * @return void
      */
     public function testArrayAccessWithInvalidValue(): void
     {
         $container = new ExtendedBlockContainer();
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $container[0] = 'invalid_value';
     }
 
     /**
      * Tests moving an item within the container.
-     *
-     * @return void
      */
     public function testMoveItem(): void
     {
@@ -271,8 +247,6 @@ class ExtendedBlockContainerTest extends TestCase
 
     /**
      * Tests the toArray method.
-     *
-     * @return void
      */
     public function testToArray(): void
     {
@@ -292,8 +266,6 @@ class ExtendedBlockContainerTest extends TestCase
 
     /**
      * Tests setting items directly.
-     *
-     * @return void
      */
     public function testSetItems(): void
     {

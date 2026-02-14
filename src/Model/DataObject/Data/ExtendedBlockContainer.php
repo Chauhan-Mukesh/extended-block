@@ -12,7 +12,11 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\Model\DataObject\Data;
 
+use ArrayAccess;
+use Countable;
 use ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock;
+use InvalidArgumentException;
+use Iterator;
 use Pimcore\Model\DataObject\Concrete;
 
 /**
@@ -39,10 +43,10 @@ use Pimcore\Model\DataObject\Concrete;
  * $count = count($container);
  * ```
  *
- * @implements \Iterator<int, ExtendedBlockItem>
- * @implements \ArrayAccess<int, ExtendedBlockItem>
+ * @implements Iterator<int, ExtendedBlockItem>
+ * @implements ArrayAccess<int, ExtendedBlockItem>
  */
-class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
+class ExtendedBlockContainer implements Iterator, Countable, ArrayAccess
 {
     /**
      * The parent object that owns this container.
@@ -100,26 +104,6 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
         $this->definition = $definition;
         $this->lazyLoad = $lazyLoad;
         $this->loaded = !$lazyLoad;
-    }
-
-    /**
-     * Ensures data is loaded (for lazy loading support).
-     *
-     * If lazy loading is enabled and data hasn't been loaded yet,
-     * this method triggers the data loading from the database.
-     */
-    protected function ensureLoaded(): void
-    {
-        if ($this->loaded || !$this->lazyLoad) {
-            return;
-        }
-
-        if ($this->definition && $this->object) {
-            $loadedContainer = $this->definition->loadBlockData($this->object);
-            $this->items = $loadedContainer->getItems();
-        }
-
-        $this->loaded = true;
     }
 
     /**
@@ -224,17 +208,6 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
     }
 
     /**
-     * Re-indexes all items to ensure sequential indices.
-     */
-    protected function reindex(): void
-    {
-        $this->items = array_values($this->items);
-        foreach ($this->items as $index => $item) {
-            $item->setIndex($index);
-        }
-    }
-
-    /**
      * Returns items filtered by type.
      *
      * @param string $type The block type to filter by
@@ -245,7 +218,7 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
     {
         $this->ensureLoaded();
 
-        return array_filter($this->items, fn ($item) => $item->getType() === $type);
+        return array_filter($this->items, static fn ($item) => $item->getType() === $type);
     }
 
     /**
@@ -357,7 +330,7 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
         $this->ensureLoaded();
 
         if (!$value instanceof ExtendedBlockItem) {
-            throw new \InvalidArgumentException('Value must be an instance of ExtendedBlockItem');
+            throw new InvalidArgumentException('Value must be an instance of ExtendedBlockItem');
         }
 
         if (null === $offset) {
@@ -432,6 +405,37 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
     {
         $this->ensureLoaded();
 
-        return array_map(fn ($item) => $item->toArray(), $this->items);
+        return array_map(static fn ($item) => $item->toArray(), $this->items);
+    }
+
+    /**
+     * Ensures data is loaded (for lazy loading support).
+     *
+     * If lazy loading is enabled and data hasn't been loaded yet,
+     * this method triggers the data loading from the database.
+     */
+    protected function ensureLoaded(): void
+    {
+        if ($this->loaded || !$this->lazyLoad) {
+            return;
+        }
+
+        if ($this->definition && $this->object) {
+            $loadedContainer = $this->definition->loadBlockData($this->object);
+            $this->items = $loadedContainer->getItems();
+        }
+
+        $this->loaded = true;
+    }
+
+    /**
+     * Re-indexes all items to ensure sequential indices.
+     */
+    protected function reindex(): void
+    {
+        $this->items = array_values($this->items);
+        foreach ($this->items as $index => $item) {
+            $item->setIndex($index);
+        }
     }
 }

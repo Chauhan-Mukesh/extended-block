@@ -22,7 +22,9 @@ pimcore.registerNS('pimcore.plugin.extendedBlock');
 pimcore.plugin.extendedBlock = Class.create({
     /**
      * Disallowed field types inside ExtendedBlock.
-     * These types cannot be added as children of ExtendedBlock.
+     * These types cannot be added as children because they either:
+     * - Store data in complex structures incompatible with separate table storage
+     * - Would create circular dependencies
      * @type {Array}
      */
     disallowedDataTypes: [
@@ -30,7 +32,8 @@ pimcore.plugin.extendedBlock = Class.create({
         'block',
         'fieldcollections',
         'objectbricks',
-        'extendedBlock'
+        'extendedBlock',
+        'classificationstore'
     ],
 
     /**

@@ -57,7 +57,7 @@ class Configuration implements ConfigurationInterface
                     ->info('Prefix for database tables created by extended blocks')
                     ->example('object_eb_')
                     ->validate()
-                        ->ifTrue(function ($value) {
+                        ->ifTrue(static function ($value) {
                             return !preg_match('/^[a-z_][a-z0-9_]*$/i', $value);
                         })
                         ->thenInvalid('Table prefix must be a valid SQL identifier (letters, numbers, underscores)')

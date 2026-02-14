@@ -43,21 +43,26 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
     allowIndex: false,
 
     /**
-     * Whether this type can be used in various contexts
+     * Whether this type can be used in various contexts.
+     * ExtendedBlock stores data in separate tables (not serialized JSON),
+     * so it can only be used at the root level of class definitions.
      * @type {Object}
      */
     allowIn: {
         object: true,
-        objectbrick: true,
-        fieldcollection: true,
-        localizedfield: true,
+        objectbrick: false,      // Not allowed - ExtendedBlock can only be at root level
+        fieldcollection: false,  // Not allowed - ExtendedBlock can only be at root level
+        localizedfield: false,   // Not allowed - ExtendedBlock can only be at root level
         classificationstore: false,
-        block: false,
-        extendedBlock: false  // Prevent nesting ExtendedBlock inside itself
+        block: false,            // Not allowed - ExtendedBlock can only be at root level
+        extendedBlock: false     // Prevent nesting ExtendedBlock inside itself
     },
 
     /**
-     * Disallowed field types inside ExtendedBlock
+     * Disallowed field types inside ExtendedBlock.
+     * These types cannot be added as children because they either:
+     * - Store data in complex structures incompatible with separate table storage
+     * - Would create circular dependencies
      * @type {Array}
      */
     disallowedDataTypes: [
@@ -65,7 +70,8 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
         'block',
         'fieldcollections',
         'objectbricks',
-        'extendedBlock'
+        'extendedBlock',
+        'classificationstore'
     ],
 
     /**
