@@ -62,7 +62,7 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
      * @returns {string} The type name
      */
     getTypeName: function() {
-        return t('extended_block');
+        return t('extended_block') || 'Extended Block';
     },
 
     /**
@@ -187,13 +187,6 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
                     minValue: 0,
                     width: 300
                 },
-                // Allow localized fields (Issue #4: Nice label name)
-                {
-                    xtype: 'checkbox',
-                    fieldLabel: t('allow_localized_fields') || 'Allow Localized Fields',
-                    name: 'allowLocalizedFields',
-                    checked: this.datax.allowLocalizedFields !== false
-                },
                 // Collapsible (Issue #4: Nice label name)
                 {
                     xtype: 'checkbox',
@@ -275,7 +268,6 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
                 storeData.push({
                     typeName: typeName,
                     displayName: def.name || typeName,
-                    icon: def.icon || '',
                     fields: def.fields || []
                 });
             }
@@ -286,67 +278,47 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
             storeData.push({
                 typeName: 'default',
                 displayName: 'Default',
-                icon: '',
                 fields: []
             });
         }
 
         this.blockDefinitionsStore = new Ext.data.JsonStore({
-            fields: ['typeName', 'displayName', 'icon', 'fields'],
+            fields: ['typeName', 'displayName', 'fields'],
             data: storeData
         });
 
-        // Create grid with improved responsive layout
+        // Create grid - simplified following Pimcore's approach
         this.blockDefinitionsGrid = new Ext.grid.Panel({
             store: this.blockDefinitionsStore,
             cls: 'extended-block-definitions-grid',
             columns: [
                 {
-                    text: t('type_name') || 'Type Name',
+                    text: t('name') || 'Name',
                     dataIndex: 'typeName',
                     flex: 1,
-                    minWidth: 100,
                     editor: {
                         xtype: 'textfield',
                         allowBlank: false
                     }
                 },
                 {
-                    text: t('display_name') || 'Display Name',
+                    text: t('title') || 'Title',
                     dataIndex: 'displayName',
                     flex: 1,
-                    minWidth: 100,
                     editor: {
                         xtype: 'textfield',
                         allowBlank: false
-                    }
-                },
-                {
-                    text: t('icon'),
-                    dataIndex: 'icon',
-                    flex: 0.5,
-                    minWidth: 80,
-                    editor: {
-                        xtype: 'textfield'
-                    }
-                },
-                {
-                    text: t('fields'),
-                    dataIndex: 'fields',
-                    width: 60,
-                    align: 'center',
-                    renderer: function(value) {
-                        return '<span class="extended-block-field-count">' + ((value && value.length) || 0) + '</span>';
                     }
                 },
                 {
                     xtype: 'actioncolumn',
-                    text: t('actions') || 'Actions',
+                    menuDisabled: true,
+                    sortable: false,
                     width: 80,
                     items: [
                         {
                             iconCls: 'pimcore_icon_edit',
-                            tooltip: t('edit_fields') || 'Edit Fields',
+                            tooltip: t('edit') || 'Edit',
                             handler: function(grid, rowIndex) {
                                 _this.editBlockType(rowIndex);
                             }
@@ -368,15 +340,14 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
             },
             tbar: [
                 {
-                    text: t('add_block_type') || 'Add Block Type',
+                    text: t('add') || 'Add',
                     iconCls: 'pimcore_icon_add',
                     handler: function() {
                         _this.addBlockType();
                     }
                 }
             ],
-            height: 250,
-            minHeight: 150,
+            height: 200,
             width: '100%'
         });
 
@@ -391,7 +362,6 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
         this.blockDefinitionsStore.add({
             typeName: 'type_' + count,
             displayName: 'Type ' + count,
-            icon: '',
             fields: []
         });
     },
@@ -428,7 +398,6 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
         this.blockDefinitionsStore.each(function(record) {
             blockDefinitions[record.get('typeName')] = {
                 name: record.get('displayName'),
-                icon: record.get('icon'),
                 fields: record.get('fields') || []
             };
         });
@@ -436,10 +405,9 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
         return {
             name: values.name,
             title: values.title,
-            tooltip: values.tooltip,  // Issue #3: Include tooltip in saved data
+            tooltip: values.tooltip,
             minItems: values.minItems,
             maxItems: values.maxItems,
-            allowLocalizedFields: values.allowLocalizedFields,
             collapsible: values.collapsible,
             collapsed: values.collapsed,
             lazyLoading: values.lazyLoading,
@@ -492,7 +460,7 @@ pimcore.object.classes.data.extendedBlock.fieldsEditor = Class.create({
     showWindow: function() {
         var _this = this;
 
-        // Create available field types combo data
+        // Create available field types combo data (without localized fields)
         this.fieldTypes = [
             { value: 'input', text: t('input') || 'Input' },
             { value: 'textarea', text: t('textarea') || 'Textarea' },
@@ -503,8 +471,7 @@ pimcore.object.classes.data.extendedBlock.fieldsEditor = Class.create({
             { value: 'select', text: t('select') || 'Select' },
             { value: 'multiselect', text: t('multiselect') || 'Multiselect' },
             { value: 'link', text: t('link') || 'Link' },
-            { value: 'image', text: t('image') || 'Image' },
-            { value: 'localizedfields', text: t('localized_fields') || 'Localized Fields' }
+            { value: 'image', text: t('image') || 'Image' }
         ];
 
         // Create store for selected fields

@@ -130,13 +130,6 @@ class ExtendedBlockValidationTest extends TestCase
             $content,
             'Should have Objectbricks prevention error message'
         );
-
-        // Check for Block inside LocalizedFields prevention
-        $this->assertStringContainsString(
-            'Block cannot be placed inside LocalizedFields within an ExtendedBlock',
-            $content,
-            'Should have Block in LocalizedFields prevention error message'
-        );
     }
 
     /**

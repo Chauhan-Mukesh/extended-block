@@ -90,14 +90,6 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
     public array $blockDefinitions = [];
 
     /**
-     * Whether to allow localized fields within block items.
-     *
-     * When enabled, block items can contain LocalizedFields, and separate
-     * localized tables will be created to store translations.
-     */
-    public bool $allowLocalizedFields = true;
-
-    /**
      * Maximum number of block items allowed.
      *
      * Null means unlimited items are allowed.
@@ -126,14 +118,6 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      * improving performance for objects with many blocks.
      */
     public bool $lazyLoading = true;
-
-    /**
-     * Whether this field is disallowed in localized fields context.
-     *
-     * ExtendedBlock with localized fields cannot be nested inside
-     * another LocalizedFields container to prevent infinite recursion.
-     */
-    public bool $disallowAddingInLocalizedField = false;
 
     /**
      * Database table prefix for this extended block.
@@ -330,11 +314,6 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                     $container->addItem($item);
                 }
             }
-
-            // Load localized data if enabled
-            if ($this->allowLocalizedFields && $this->hasLocalizedFields()) {
-                $this->loadLocalizedData($container, $object);
-            }
         } catch (\Exception $e) {
             Logger::error('ExtendedBlock: Error loading block data: '.$e->getMessage());
         }
@@ -368,7 +347,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         $blockDef = $this->blockDefinitions[$type] ?? null;
         if ($blockDef && isset($blockDef['fields'])) {
             foreach ($blockDef['fields'] as $fieldDef) {
-                if ($fieldDef instanceof Data && !($fieldDef instanceof Localizedfields)) {
+                if ($fieldDef instanceof Data) {
                     $fieldName = $fieldDef->getName();
                     if (isset($row[$fieldName])) {
                         $value = $fieldDef->getDataFromResource($row[$fieldName], $object);
