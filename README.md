@@ -5,7 +5,7 @@
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D8.0-8892BF.svg)](https://php.net/)
 [![Pimcore Version](https://img.shields.io/badge/pimcore-%3E%3D10.0-00ADD8.svg)](https://pimcore.com/)
 
-A Pimcore bundle that extends the block data type by storing data in separate database tables instead of serialized JSON in a single column. This provides better performance, queryability, and proper relational data modeling.
+A Pimcore bundle that extends the block data type by storing data in separate database tables instead of serialized JSON in a single column. This provides better performance, queryability, and proper relational data modeling while maintaining the same UI/UX experience as Pimcore's native block field.
 
 ## 📋 Table of Contents
 
@@ -17,7 +17,7 @@ A Pimcore bundle that extends the block data type by storing data in separate da
 - [PHP API](#-php-api)
 - [Architecture](#-architecture)
 - [Database Schema](#-database-schema)
-- [Localized Fields](#-localized-fields)
+- [Field Restrictions](#-field-restrictions)
 - [Block Nesting Rules](#-block-nesting-rules)
 - [API Reference](#-api-reference)
 - [Testing](#-testing)
@@ -29,15 +29,15 @@ A Pimcore bundle that extends the block data type by storing data in separate da
 ## ✨ Features
 
 - **Separate Table Storage**: Each extended block stores data in dedicated database tables, similar to field collections
+- **SQL Queryable**: Unlike standard blocks that use serialized JSON, extended block data can be queried using SQL
 - **Better Performance**: Eliminates serialization overhead and enables efficient database queries
-- **Full Queryability**: Block data can be queried directly using SQL
-- **Localized Field Support**: Full support for localized fields within block items
+- **Pimcore-style UI/UX**: Follows Pimcore's native block UI patterns with inline controls (add before/after, delete, move up/down)
+- **Responsive Design**: Fully responsive interface with auto-adjusting height/width, transitions, and animations
+- **Multiple Block Types**: Define multiple block types with different field configurations
 - **Nesting Prevention**: Automatic validation prevents invalid block nesting configurations
 - **Safe Schema Updates**: New fields can be added without data loss; removed fields preserve existing data
 - **Lazy Loading**: Optional lazy loading for improved performance with large datasets
-- **Complete Admin UI**: Full Pimcore admin integration with drag-and-drop ordering
-- **Multiple Block Types**: Define multiple block types with different field configurations
-- **Migration Tools**: Tools for migrating from standard Block type
+- **Dark Mode Support**: CSS supports dark mode when the browser prefers dark color scheme
 
 ## 📦 Requirements
 
@@ -112,9 +112,6 @@ extended_block:
     # Prefix for database tables (default: 'object_eb_')
     table_prefix: 'object_eb_'
     
-    # Enable localized fields support (default: true)
-    enable_localized_fields: true
-    
     # Enable strict validation mode (default: true)
     strict_mode: true
     
@@ -143,9 +140,7 @@ In the class editor, you can define multiple block types, each with its own set 
 Block Type: text_block
 ├── title (Input)
 ├── content (WYSIWYG)
-└── LocalizedFields
-    ├── headline (Input)
-    └── description (Textarea)
+└── description (Textarea)
 
 Block Type: image_block
 ├── image (Image)
@@ -171,9 +166,6 @@ if (!$container->isEmpty()) {
     foreach ($container as $item) {
         echo $item->getType();           // e.g., 'text_block'
         echo $item->getFieldValue('title');
-        
-        // Get localized value
-        echo $item->getLocalizedValue('en', 'headline');
     }
     
     // Get first/last item
@@ -190,8 +182,7 @@ if (!$container->isEmpty()) {
 // Create a new item
 $newItem = new ExtendedBlockItem('text_block', 0);
 $newItem->setFieldValue('title', 'My Title');
-$newItem->setLocalizedValue('en', 'headline', 'English Headline');
-$newItem->setLocalizedValue('de', 'headline', 'German Headline');
+$newItem->setFieldValue('content', 'My Content');
 
 // Add item to container
 $container->addItem($newItem);
@@ -252,10 +243,6 @@ $item = new ExtendedBlockItem('text_block', 0);
 $item->setFieldValue('title', 'Product Features');
 $item->setFieldValue('content', '<p>Amazing features...</p>');
 
-// Set localized content
-$item->setLocalizedValue('en', 'headline', 'Features');
-$item->setLocalizedValue('de', 'headline', 'Eigenschaften');
-
 $container->addItem($item);
 $product->save();
 ```
@@ -265,7 +252,7 @@ $product->save();
 | Class | Namespace | Description |
 |-------|-----------|-------------|
 | `ExtendedBlockContainer` | `ExtendedBlockBundle\Model\DataObject\Data` | Container for block items with iteration and array access support |
-| `ExtendedBlockItem` | `ExtendedBlockBundle\Model\DataObject\Data` | Individual block item with field values and localized data |
+| `ExtendedBlockItem` | `ExtendedBlockBundle\Model\DataObject\Data` | Individual block item with field values |
 
 ### Common Operations
 
@@ -278,7 +265,6 @@ $container = $product->getContentBlocks();
 foreach ($container as $item) {
     echo $item->getType();                    // Block type
     echo $item->getFieldValue('title');       // Field value
-    echo $item->getLocalizedValue('en', 'headline'); // Localized value
 }
 
 // Access specific items
@@ -386,54 +372,34 @@ CREATE TABLE `object_eb_{classId}_{fieldName}` (
 );
 ```
 
-### Localized Table Structure
+## 🚫 Field Restrictions
 
-For localized fields within blocks:
+ExtendedBlock has specific field restrictions to ensure data integrity and prevent storage complexity issues. The following field types **cannot** be used within ExtendedBlock items:
 
-```sql
-CREATE TABLE `object_eb_{classId}_{fieldName}_localized` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-    `ooo_id` INT(11) UNSIGNED NOT NULL,     -- Reference to main item
-    `language` VARCHAR(10) NOT NULL,         -- Language code
-    -- ... localized field columns
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_item_language` (`ooo_id`, `language`)
-);
-```
+| Field Type | Reason |
+|------------|--------|
+| LocalizedFields | Complex table relationships would break storage logic |
+| Block | Standard Block uses serialized JSON storage mechanism |
+| FieldCollections | Complex container types cannot be nested |
+| ObjectBricks | Complex container types cannot be nested |
+| ExtendedBlock | Would cause infinite recursion |
 
-## 🌍 Localized Fields
+### Supported Field Types
 
-### Configuration
+ExtendedBlock supports the following simple field types:
 
-ExtendedBlock supports localized fields within block items:
-
-```php
-// In class definition, add LocalizedFields to a block type:
-Block Type: content_block
-├── image (Image)
-└── LocalizedFields
-    ├── title (Input)
-    └── description (Textarea)
-```
-
-### Usage
-
-```php
-// Set localized values
-$item->setLocalizedValue('en', 'title', 'English Title');
-$item->setLocalizedValue('de', 'title', 'German Title');
-$item->setLocalizedValue('fr', 'title', 'French Title');
-
-// Get localized values
-$enTitle = $item->getLocalizedValue('en', 'title');
-$deTitle = $item->getLocalizedValue('de', 'title');
-
-// Get all localized data for a language
-$enData = $item->getLocalizedValuesForLanguage('en');
-
-// Get all localized data
-$allLocalized = $item->getLocalizedData();
-```
+| Field Type | Description |
+|------------|-------------|
+| Input | Single-line text input |
+| Textarea | Multi-line text input |
+| WYSIWYG | Rich text editor |
+| Numeric | Number input |
+| Checkbox | Boolean toggle |
+| Date | Date picker |
+| Select | Dropdown selection |
+| Multiselect | Multi-value selection |
+| Link | URL input |
+| Image | Asset image selector |
 
 ## 🚫 Placement and Nesting Rules
 
@@ -467,8 +433,9 @@ ExtendedBlock can **only** be placed at the root level of a class definition. To
 |------------|--------|
 | ExtendedBlock | Would cause infinite recursion and complex data relationships |
 | Block | Standard Block uses different storage mechanism |
-| Fieldcollections | Complex container types cannot be nested |
-| Objectbricks | Complex container types cannot be nested |
+| FieldCollections | Complex container types cannot be nested |
+| ObjectBricks | Complex container types cannot be nested |
+| LocalizedFields | Complex table relationships would break storage logic |
 
 ### Examples
 
@@ -516,9 +483,7 @@ Class: Product
 │   ├── text_block
 │   │   ├── title (Input)
 │   │   ├── content (WYSIWYG)
-│   │   └── LocalizedFields
-│   │       ├── headline (Input)
-│   │       └── teaser (Textarea)
+│   │   └── description (Textarea)
 │   └── image_block
 │       ├── image (Image)
 │       └── caption (Input)
@@ -573,11 +538,6 @@ The bundle automatically validates your class definition when saving and will th
 | `getFieldValue(string $name)` | Get field value |
 | `setFieldValue(string $name, $value)` | Set field value |
 | `hasFieldValue(string $name)` | Check if field exists |
-| `getLocalizedValue(string $lang, string $name)` | Get localized value |
-| `setLocalizedValue(string $lang, string $name, $value)` | Set localized value |
-| `getLocalizedValuesForLanguage(string $lang)` | Get all values for language |
-| `getLocalizedData()` | Get all localized data |
-| `setLocalizedData(array $data)` | Set all localized data |
 | `toArray()` | Convert to array |
 | `fromArray(array $data)` | Create from array |
 

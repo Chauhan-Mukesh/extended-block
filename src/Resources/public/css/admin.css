@@ -2,6 +2,7 @@
  * Extended Block Bundle - Admin CSS
  *
  * Styles for the Extended Block admin interface.
+ * Follows Pimcore's block styling patterns with enhanced responsiveness.
  *
  * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
@@ -9,102 +10,161 @@
  * @license    MIT License
  */
 
-/* Main container styles */
+/* ==========================================================================
+   Main Container Styles
+   ========================================================================== */
 .extended-block-container {
     border: 1px solid #c0c0c0;
     border-radius: 4px;
     background-color: #f9f9f9;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.extended-block-container:hover {
+    border-color: #a0a0a0;
 }
 
 .extended-block-container .x-panel-header {
     background-color: #e8e8e8;
     border-bottom: 1px solid #d0d0d0;
+    transition: background-color 0.2s ease;
 }
 
-/* Block item styles */
+.extended-block-container .x-panel-header:hover {
+    background-color: #e0e0e0;
+}
+
+/* ==========================================================================
+   Block Item Styles
+   ========================================================================== */
 .extended-block-item {
     border: 1px solid #d0d0d0;
     border-radius: 3px;
     background-color: #ffffff;
     margin-bottom: 10px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.extended-block-item .x-panel-header {
-    background-color: #f0f0f0;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-.extended-block-item .x-panel-header-title {
-    font-weight: bold;
-    color: #333;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
 }
 
 .extended-block-item:hover {
     border-color: #3b5998;
+    box-shadow: 0 2px 6px rgba(59, 89, 152, 0.15);
 }
 
-/* Item being dragged */
+.extended-block-item .x-panel-header {
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #e0e0e0;
+    transition: background-color 0.2s ease;
+}
+
+.extended-block-item .x-panel-header:hover {
+    background-color: #eef2f7;
+}
+
+.extended-block-item .x-panel-header-title {
+    font-weight: 600;
+    color: #333;
+}
+
+/* ==========================================================================
+   Inline Toolbar Styles (Following Pimcore's Block Pattern)
+   ========================================================================== */
+.extended-block-toolbar {
+    background: transparent !important;
+    border: none !important;
+    padding: 5px 0;
+}
+
+.extended-block-toolbar .x-btn {
+    margin-right: 3px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.extended-block-toolbar .x-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Block control buttons - following Pimcore's naming */
+.pimcore_block_button_plus,
+.pimcore_block_button_minus,
+.pimcore_block_button_up,
+.pimcore_block_button_down {
+    transition: all 0.2s ease;
+}
+
+.pimcore_block_button_plus:hover {
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.pimcore_block_button_minus:hover {
+    background-color: rgba(244, 67, 54, 0.1);
+}
+
+/* ==========================================================================
+   Drag & Drop Styles
+   ========================================================================== */
 .extended-block-item-dragging {
     opacity: 0.7;
     border: 2px dashed #3b5998;
+    transform: rotate(1deg);
 }
 
-/* Drop zone highlight */
 .extended-block-drop-zone {
     background-color: #e6f3ff;
     border: 2px dashed #3b5998;
+    animation: pulse-border 1s infinite;
 }
 
-/* Toolbar styles */
-.extended-block-container .x-toolbar {
-    background-color: #f5f5f5;
-    border-bottom: 1px solid #e0e0e0;
-    padding: 5px;
+@keyframes pulse-border {
+    0%, 100% {
+        border-color: #3b5998;
+    }
+    50% {
+        border-color: #6b8fd4;
+    }
 }
 
-/* Add button styles */
-.extended-block-container .pimcore_icon_add {
-    background-color: #4CAF50;
-}
-
-/* Localized fields tab panel within block items */
-.extended-block-item .x-tab-bar {
-    background-color: #f8f8f8;
-}
-
-.extended-block-item .x-tab {
-    border-radius: 3px 3px 0 0;
-}
-
-.extended-block-item .x-tab-active {
-    background-color: #ffffff;
-    border-bottom-color: #ffffff;
-}
-
-/* Field container styles */
+/* ==========================================================================
+   Field Container Styles
+   ========================================================================== */
 .extended-block-item .x-form-item {
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.extended-block-item .x-form-item:hover {
+    background-color: rgba(0, 0, 0, 0.02);
 }
 
 .extended-block-item .x-form-item-label {
     font-weight: 500;
     color: #555;
+    min-width: 150px;
 }
 
-/* Tool icons in panel header */
+/* ==========================================================================
+   Tool Icons (Header Actions)
+   ========================================================================== */
 .extended-block-item .x-tool {
-    opacity: 0.6;
-    transition: opacity 0.2s;
+    opacity: 0.5;
+    transition: opacity 0.2s ease, transform 0.15s ease;
 }
 
 .extended-block-item:hover .x-tool {
     opacity: 1;
 }
 
-/* Empty state */
+.extended-block-item .x-tool:hover {
+    transform: scale(1.2);
+}
+
+/* ==========================================================================
+   Empty State
+   ========================================================================== */
 .extended-block-empty {
-    padding: 40px;
+    padding: 40px 20px;
     text-align: center;
     color: #888;
     font-style: italic;
@@ -112,54 +172,99 @@
     border: 2px dashed #ddd;
     border-radius: 4px;
     margin: 10px;
+    transition: all 0.3s ease;
 }
 
-/* Grid view styles for block definitions */
-.extended-block-definitions-grid {
+.extended-block-empty:hover {
+    border-color: #3b5998;
+    background-color: #f0f5ff;
+}
+
+/* ==========================================================================
+   Grid Styles (Block Definitions & Fields Editor)
+   ========================================================================== */
+.extended-block-definitions-grid,
+.extended-block-fields-grid {
     border: 1px solid #e0e0e0;
+    width: 100%;
+    border-radius: 3px;
+    overflow: hidden;
 }
 
-.extended-block-definitions-grid .x-grid-header {
+.extended-block-definitions-grid .x-grid-header,
+.extended-block-fields-grid .x-grid-header {
     background-color: #f5f5f5;
 }
 
-/* Warning message styles */
+.extended-block-definitions-grid .x-grid-cell,
+.extended-block-fields-grid .x-grid-cell {
+    padding: 8px 12px;
+    transition: background-color 0.15s ease;
+}
+
+.extended-block-definitions-grid .x-grid-row:hover,
+.extended-block-fields-grid .x-grid-row:hover {
+    background-color: #f0f7ff;
+}
+
+.extended-block-fields-grid .x-grid-row-selected {
+    background-color: #e6f3ff;
+}
+
+/* ==========================================================================
+   Message Styles
+   ========================================================================== */
 .extended-block-warning {
     background-color: #fff3cd;
     border: 1px solid #ffc107;
     border-radius: 4px;
-    padding: 10px 15px;
+    padding: 12px 16px;
     margin: 10px 0;
     color: #856404;
+    animation: fadeIn 0.3s ease;
 }
 
 .extended-block-warning::before {
     content: "⚠️ ";
 }
 
-/* Error message styles */
 .extended-block-error {
     background-color: #f8d7da;
     border: 1px solid #f5c6cb;
     border-radius: 4px;
-    padding: 10px 15px;
+    padding: 12px 16px;
     margin: 10px 0;
     color: #721c24;
+    animation: fadeIn 0.3s ease;
 }
 
-/* Info message styles */
 .extended-block-info {
     background-color: #d1ecf1;
     border: 1px solid #bee5eb;
     border-radius: 4px;
-    padding: 10px 15px;
-    margin: 10px 0;
+    padding: 10px 14px;
+    margin: 0;
     color: #0c5460;
+    font-size: 12px;
 }
 
-/* Loading state */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================================================
+   Loading State
+   ========================================================================== */
 .extended-block-loading {
     position: relative;
+    pointer-events: none;
 }
 
 .extended-block-loading::after {
@@ -169,14 +274,44 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0.85);
+    z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
+    animation: fadeIn 0.2s ease;
 }
 
-/* Responsive adjustments */
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+@media (max-width: 1400px) {
+    .extended-block-item .x-form-item-label {
+        min-width: 130px;
+    }
+}
+
 @media (max-width: 1200px) {
+    .extended-block-container {
+        font-size: 13px;
+    }
+
+    .extended-block-item .x-panel-header-title {
+        font-size: 13px;
+    }
+
+    .extended-block-definitions-grid .x-grid-cell,
+    .extended-block-fields-grid .x-grid-cell {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .extended-block-item .x-form-item-label {
+        min-width: 120px;
+    }
+}
+
+@media (max-width: 992px) {
     .extended-block-container {
         font-size: 12px;
     }
@@ -184,18 +319,108 @@
     .extended-block-item .x-panel-header-title {
         font-size: 12px;
     }
+
+    .extended-block-definitions-grid .x-grid-cell,
+    .extended-block-fields-grid .x-grid-cell {
+        padding: 5px 8px;
+        font-size: 11px;
+    }
+
+    .extended-block-item .x-form-item-label {
+        min-width: 100px;
+    }
+
+    .extended-block-toolbar .x-btn {
+        margin-right: 2px;
+    }
 }
 
-/* Dark mode support (when Pimcore supports it) */
+@media (max-width: 768px) {
+    .extended-block-container {
+        font-size: 11px;
+    }
+
+    .extended-block-item .x-form-item-label {
+        min-width: 80px;
+    }
+
+    .extended-block-definitions-grid .x-grid-cell,
+    .extended-block-fields-grid .x-grid-cell {
+        padding: 4px 6px;
+        font-size: 10px;
+    }
+}
+
+/* ==========================================================================
+   Fieldset Improvements
+   ========================================================================== */
+.extended-block-container .x-fieldset {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 4px;
+    transition: border-color 0.2s ease;
+}
+
+.extended-block-container .x-fieldset:hover {
+    border-color: #c0c0c0;
+}
+
+.extended-block-container .x-fieldset-header {
+    font-weight: bold;
+    color: #333;
+}
+
+/* ==========================================================================
+   Collapse/Expand Animations
+   ========================================================================== */
+.extended-block-item .x-panel-body {
+    transition: height 0.25s ease;
+}
+
+/* ==========================================================================
+   Z-Index Management
+   ========================================================================== */
+.extended-block-container {
+    position: relative;
+    z-index: 1;
+}
+
+.extended-block-item {
+    position: relative;
+    z-index: 2;
+}
+
+.extended-block-toolbar {
+    position: relative;
+    z-index: 3;
+}
+
+.extended-block-toolbar .x-menu {
+    z-index: 100000;
+}
+
+/* ==========================================================================
+   Dark Mode Support
+   ========================================================================== */
 @media (prefers-color-scheme: dark) {
     .extended-block-container {
         background-color: #2d2d2d;
         border-color: #444;
     }
 
+    .extended-block-container .x-panel-header {
+        background-color: #3a3a3a;
+        border-color: #444;
+    }
+
     .extended-block-item {
         background-color: #3d3d3d;
         border-color: #555;
+    }
+
+    .extended-block-item:hover {
+        border-color: #6b8fd4;
+        box-shadow: 0 2px 8px rgba(107, 143, 212, 0.2);
     }
 
     .extended-block-item .x-panel-header {
@@ -207,8 +432,40 @@
         color: #eee;
     }
 
-    .extended-block-container .x-toolbar {
-        background-color: #3a3a3a;
-        border-color: #444;
+    .extended-block-item .x-form-item-label {
+        color: #ccc;
+    }
+
+    .extended-block-info {
+        background-color: #1a3d4d;
+        border-color: #2d6b8a;
+        color: #b3e0f2;
+    }
+
+    .extended-block-definitions-grid,
+    .extended-block-fields-grid {
+        background-color: #3d3d3d;
+        border-color: #555;
+    }
+
+    .extended-block-definitions-grid .x-grid-header,
+    .extended-block-fields-grid .x-grid-header {
+        background-color: #444;
+    }
+
+    .extended-block-definitions-grid .x-grid-row:hover,
+    .extended-block-fields-grid .x-grid-row:hover {
+        background-color: #4a4a5a;
+    }
+
+    .extended-block-empty {
+        background-color: #3d3d3d;
+        border-color: #555;
+        color: #aaa;
+    }
+
+    .extended-block-empty:hover {
+        border-color: #6b8fd4;
+        background-color: #404050;
     }
 }
