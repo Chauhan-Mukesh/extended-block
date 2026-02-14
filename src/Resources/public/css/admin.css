@@ -114,13 +114,54 @@
     margin: 10px;
 }
 
-/* Grid view styles for block definitions */
+/* Grid view styles for block definitions (Issue #5: Improved responsiveness) */
 .extended-block-definitions-grid {
     border: 1px solid #e0e0e0;
+    min-width: 400px;
 }
 
 .extended-block-definitions-grid .x-grid-header {
     background-color: #f5f5f5;
+}
+
+.extended-block-definitions-grid .x-grid-cell {
+    padding: 4px 8px;
+}
+
+.extended-block-definitions-grid .x-grid-row:hover {
+    background-color: #f0f7ff;
+}
+
+/* Field count badge */
+.extended-block-field-count {
+    display: inline-block;
+    background-color: #3b5998;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+/* Fields editor grid styles (Issue #6: New grid-based editor) */
+.extended-block-fields-grid {
+    border: 1px solid #e0e0e0;
+}
+
+.extended-block-fields-grid .x-grid-header {
+    background-color: #f5f5f5;
+}
+
+.extended-block-fields-grid .x-grid-cell {
+    padding: 4px 8px;
+}
+
+.extended-block-fields-grid .x-grid-row:hover {
+    background-color: #f0f7ff;
+}
+
+.extended-block-fields-grid .x-grid-row-selected {
+    background-color: #e6f3ff;
 }
 
 /* Warning message styles */
@@ -152,9 +193,10 @@
     background-color: #d1ecf1;
     border: 1px solid #bee5eb;
     border-radius: 4px;
-    padding: 10px 15px;
-    margin: 10px 0;
+    padding: 8px 12px;
+    margin: 0;
     color: #0c5460;
+    font-size: 12px;
 }
 
 /* Loading state */
@@ -175,7 +217,13 @@
     justify-content: center;
 }
 
-/* Responsive adjustments */
+/* Responsive adjustments (Issue #5: Improved responsiveness) */
+@media (max-width: 1400px) {
+    .extended-block-definitions-grid {
+        min-width: 350px;
+    }
+}
+
 @media (max-width: 1200px) {
     .extended-block-container {
         font-size: 12px;
@@ -184,6 +232,45 @@
     .extended-block-item .x-panel-header-title {
         font-size: 12px;
     }
+
+    .extended-block-definitions-grid {
+        min-width: 300px;
+    }
+
+    .extended-block-definitions-grid .x-grid-cell {
+        padding: 3px 6px;
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 992px) {
+    .extended-block-definitions-grid {
+        min-width: 250px;
+    }
+
+    .extended-block-field-count {
+        padding: 1px 6px;
+        font-size: 10px;
+    }
+}
+
+/* Form panel improvements for better readability */
+.extended-block-container .x-form-item-label {
+    width: 180px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Fieldset improvements */
+.extended-block-container .x-fieldset {
+    margin-top: 15px;
+    padding: 10px;
+}
+
+.extended-block-container .x-fieldset-header {
+    font-weight: bold;
+    color: #333;
 }
 
 /* Dark mode support (when Pimcore supports it) */
@@ -210,5 +297,27 @@
     .extended-block-container .x-toolbar {
         background-color: #3a3a3a;
         border-color: #444;
+    }
+
+    .extended-block-info {
+        background-color: #1a3d4d;
+        border-color: #2d6b8a;
+        color: #b3e0f2;
+    }
+
+    .extended-block-definitions-grid,
+    .extended-block-fields-grid {
+        background-color: #3d3d3d;
+        border-color: #555;
+    }
+
+    .extended-block-definitions-grid .x-grid-header,
+    .extended-block-fields-grid .x-grid-header {
+        background-color: #444;
+    }
+
+    .extended-block-definitions-grid .x-grid-row:hover,
+    .extended-block-fields-grid .x-grid-row:hover {
+        background-color: #4a4a5a;
     }
 }

@@ -95,80 +95,132 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
         this.settingsPanel = new Ext.form.Panel({
             layout: 'form',
             bodyStyle: 'padding: 10px;',
+            autoScroll: true,
+            defaults: {
+                labelWidth: 180
+            },
             items: [
-                // Title field
-                {
-                    xtype: 'textfield',
-                    fieldLabel: t('title'),
-                    name: 'title',
-                    value: this.datax.title,
-                    width: 400
-                },
-                // Name field
+                // Name field (Issue #1 & #2: Auto-fill title and real-time tree update)
                 {
                     xtype: 'textfield',
                     fieldLabel: t('name'),
                     name: 'name',
+                    itemId: 'name',
                     value: this.datax.name,
-                    width: 400,
+                    width: 540,
+                    maxLength: 70,
                     enableKeyEvents: true,
                     listeners: {
                         keyup: function(field) {
+                            // Sanitize name
                             field.setValue(field.getValue().replace(/[^a-zA-Z0-9_]/g, ''));
+
+                            // Auto-fill title field if untouched (like Pimcore default)
+                            var title = field.ownerCt.getComponent('title');
+                            if (title && title._autooverwrite === true) {
+                                var nameValue = field.getValue();
+                                var fixedTitle = '';
+                                for (var i = 0; i < nameValue.length; i++) {
+                                    var currentChar = nameValue[i];
+                                    // Capitalize first letter, add space before uppercase letters
+                                    fixedTitle += i === 0
+                                        ? currentChar.toUpperCase()
+                                        : (currentChar === currentChar.toUpperCase() && (currentChar.charCodeAt(0) < 48 || currentChar.charCodeAt(0) > 57))
+                                            ? ' ' + currentChar
+                                            : currentChar;
+                                }
+                                title.setValue(fixedTitle);
+                            }
+
+                            // Update tree node text in real-time (Issue #2)
+                            _this.updateTreeNodeName(field.getValue());
                         }
                     }
                 },
-                // Min items
+                // Title field (Issue #1: Auto-fill support)
+                {
+                    xtype: 'textfield',
+                    fieldLabel: t('title') + ' (' + t('label') + ')',
+                    name: 'title',
+                    itemId: 'title',
+                    value: this.datax.title,
+                    width: 540,
+                    enableKeyEvents: true,
+                    listeners: {
+                        keyup: function(field) {
+                            // Mark as manually edited
+                            field._autooverwrite = false;
+                        },
+                        afterrender: function(field) {
+                            // Enable auto-overwrite if title is empty
+                            if (!field.getValue() || field.getValue().length < 1) {
+                                field._autooverwrite = true;
+                            }
+                        }
+                    }
+                },
+                // Tooltip field (Issue #3: Add tooltip option)
+                {
+                    xtype: 'textarea',
+                    fieldLabel: t('tooltip'),
+                    name: 'tooltip',
+                    value: this.datax.tooltip || '',
+                    width: 540,
+                    height: 80
+                },
+                // Min items (Issue #4: Nice label name)
                 {
                     xtype: 'numberfield',
-                    fieldLabel: t('min_items'),
+                    fieldLabel: t('minimum_items') || 'Minimum Items',
                     name: 'minItems',
                     value: this.datax.minItems || 0,
                     minValue: 0,
-                    width: 200
+                    width: 300
                 },
-                // Max items
+                // Max items (Issue #4: Nice label name)
                 {
                     xtype: 'numberfield',
-                    fieldLabel: t('max_items'),
+                    fieldLabel: t('maximum_items') || 'Maximum Items',
                     name: 'maxItems',
                     value: this.datax.maxItems,
                     minValue: 0,
-                    width: 200
+                    width: 300
                 },
-                // Allow localized fields
+                // Allow localized fields (Issue #4: Nice label name)
                 {
                     xtype: 'checkbox',
-                    fieldLabel: t('allow_localized_fields'),
+                    fieldLabel: t('allow_localized_fields') || 'Allow Localized Fields',
                     name: 'allowLocalizedFields',
                     checked: this.datax.allowLocalizedFields !== false
                 },
-                // Collapsible
+                // Collapsible (Issue #4: Nice label name)
                 {
                     xtype: 'checkbox',
                     fieldLabel: t('collapsible'),
                     name: 'collapsible',
                     checked: this.datax.collapsible !== false
                 },
-                // Collapsed by default
+                // Collapsed by default (Issue #4: Nice label name)
                 {
                     xtype: 'checkbox',
-                    fieldLabel: t('collapsed'),
+                    fieldLabel: t('collapsed_by_default') || 'Collapsed by Default',
                     name: 'collapsed',
                     checked: this.datax.collapsed === true
                 },
-                // Lazy loading
+                // Lazy loading (Issue #4: Nice label name)
                 {
                     xtype: 'checkbox',
-                    fieldLabel: t('lazy_loading'),
+                    fieldLabel: t('lazy_loading') || 'Lazy Loading',
                     name: 'lazyLoading',
                     checked: this.datax.lazyLoading !== false
                 },
-                // Block definitions
+                // Block definitions (Issue #5: Improved layout)
                 {
                     xtype: 'fieldset',
-                    title: t('block_definitions'),
-                    collapsible: false,
+                    title: t('block_definitions') || 'Block Definitions',
+                    collapsible: true,
+                    collapsed: false,
+                    layout: 'fit',
                     style: 'margin-top: 20px;',
                     items: [blockDefinitionsGrid]
                 }
@@ -179,10 +231,33 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
     },
 
     /**
+     * Updates the tree node text when the name field changes (Issue #2).
+     *
+     * @param {string} name - The new field name
+     */
+    updateTreeNodeName: function(name) {
+        if (this.treeNode && name && this.isValidName(name)) {
+            this.treeNode.set('text', name);
+        }
+    },
+
+    /**
+     * Validates field name format.
+     *
+     * @param {string} name - The name to validate
+     * @returns {boolean} True if valid
+     */
+    isValidName: function(name) {
+        var validNamePattern = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+        return validNamePattern.test(name);
+    },
+
+    /**
      * Creates the block definitions grid.
      *
      * This grid allows users to define multiple block types,
      * each with its own set of fields.
+     * (Issue #5: Improved responsive layout)
      *
      * @returns {Ext.grid.Panel} The block definitions grid
      */
@@ -220,23 +295,26 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
             data: storeData
         });
 
-        // Create grid
+        // Create grid with improved responsive layout
         this.blockDefinitionsGrid = new Ext.grid.Panel({
             store: this.blockDefinitionsStore,
+            cls: 'extended-block-definitions-grid',
             columns: [
                 {
-                    text: t('type_name'),
+                    text: t('type_name') || 'Type Name',
                     dataIndex: 'typeName',
                     flex: 1,
+                    minWidth: 100,
                     editor: {
                         xtype: 'textfield',
                         allowBlank: false
                     }
                 },
                 {
-                    text: t('display_name'),
+                    text: t('display_name') || 'Display Name',
                     dataIndex: 'displayName',
                     flex: 1,
+                    minWidth: 100,
                     editor: {
                         xtype: 'textfield',
                         allowBlank: false
@@ -245,7 +323,8 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
                 {
                     text: t('icon'),
                     dataIndex: 'icon',
-                    width: 150,
+                    flex: 0.5,
+                    minWidth: 80,
                     editor: {
                         xtype: 'textfield'
                     }
@@ -253,18 +332,20 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
                 {
                     text: t('fields'),
                     dataIndex: 'fields',
-                    width: 80,
+                    width: 60,
+                    align: 'center',
                     renderer: function(value) {
-                        return (value && value.length) || 0;
+                        return '<span class="extended-block-field-count">' + ((value && value.length) || 0) + '</span>';
                     }
                 },
                 {
                     xtype: 'actioncolumn',
+                    text: t('actions') || 'Actions',
                     width: 80,
                     items: [
                         {
                             iconCls: 'pimcore_icon_edit',
-                            tooltip: t('edit_fields'),
+                            tooltip: t('edit_fields') || 'Edit Fields',
                             handler: function(grid, rowIndex) {
                                 _this.editBlockType(rowIndex);
                             }
@@ -286,14 +367,15 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
             },
             tbar: [
                 {
-                    text: t('add_block_type'),
+                    text: t('add_block_type') || 'Add Block Type',
                     iconCls: 'pimcore_icon_add',
                     handler: function() {
                         _this.addBlockType();
                     }
                 }
             ],
-            height: 200,
+            height: 250,
+            minHeight: 150,
             width: '100%'
         });
 
@@ -353,6 +435,7 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
         return {
             name: values.name,
             title: values.title,
+            tooltip: values.tooltip,  // Issue #3: Include tooltip in saved data
             minItems: values.minItems,
             maxItems: values.maxItems,
             allowLocalizedFields: values.allowLocalizedFields,
@@ -381,8 +464,9 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
 
 /**
  * Fields editor window for block type configuration.
+ * (Issue #6: Complete rewrite for proper functionality)
  *
- * Provides a drag-and-drop interface for defining fields within a block type.
+ * Provides a grid-based interface for defining fields within a block type.
  */
 pimcore.object.classes.data.extendedBlock.fieldsEditor = Class.create({
 
@@ -395,7 +479,7 @@ pimcore.object.classes.data.extendedBlock.fieldsEditor = Class.create({
      */
     initialize: function(typeName, fields, callback) {
         this.typeName = typeName;
-        this.fields = fields || [];
+        this.fields = Ext.clone(fields) || [];
         this.callback = callback;
 
         this.showWindow();
@@ -407,33 +491,150 @@ pimcore.object.classes.data.extendedBlock.fieldsEditor = Class.create({
     showWindow: function() {
         var _this = this;
 
-        // Create available fields tree
-        var availableFieldsTree = this.createAvailableFieldsTree();
+        // Create available field types combo data
+        this.fieldTypes = [
+            { value: 'input', text: t('input') || 'Input' },
+            { value: 'textarea', text: t('textarea') || 'Textarea' },
+            { value: 'wysiwyg', text: t('wysiwyg') || 'WYSIWYG' },
+            { value: 'numeric', text: t('numeric') || 'Numeric' },
+            { value: 'checkbox', text: t('checkbox') || 'Checkbox' },
+            { value: 'date', text: t('date') || 'Date' },
+            { value: 'select', text: t('select') || 'Select' },
+            { value: 'multiselect', text: t('multiselect') || 'Multiselect' },
+            { value: 'link', text: t('link') || 'Link' },
+            { value: 'image', text: t('image') || 'Image' },
+            { value: 'localizedfields', text: t('localized_fields') || 'Localized Fields' }
+        ];
 
-        // Create selected fields tree
-        var selectedFieldsTree = this.createSelectedFieldsTree();
+        // Create store for selected fields
+        this.fieldsStore = new Ext.data.JsonStore({
+            fields: ['fieldtype', 'name', 'title', 'tooltip'],
+            data: this.fields
+        });
+
+        // Create fields grid
+        this.fieldsGrid = new Ext.grid.Panel({
+            store: this.fieldsStore,
+            region: 'center',
+            cls: 'extended-block-fields-grid',
+            columns: [
+                {
+                    text: t('type') || 'Type',
+                    dataIndex: 'fieldtype',
+                    width: 140,
+                    renderer: function(value) {
+                        var fieldType = _this.fieldTypes.find(function(ft) {
+                            return ft.value === value;
+                        });
+                        return fieldType ? fieldType.text : value;
+                    },
+                    editor: {
+                        xtype: 'combobox',
+                        store: new Ext.data.Store({
+                            fields: ['value', 'text'],
+                            data: this.fieldTypes
+                        }),
+                        displayField: 'text',
+                        valueField: 'value',
+                        editable: false,
+                        forceSelection: true
+                    }
+                },
+                {
+                    text: t('name'),
+                    dataIndex: 'name',
+                    flex: 1,
+                    editor: {
+                        xtype: 'textfield',
+                        allowBlank: false
+                    }
+                },
+                {
+                    text: t('title') + ' (' + t('label') + ')' || 'Title (Label)',
+                    dataIndex: 'title',
+                    flex: 1,
+                    editor: {
+                        xtype: 'textfield'
+                    }
+                },
+                {
+                    text: t('tooltip') || 'Tooltip',
+                    dataIndex: 'tooltip',
+                    flex: 1,
+                    editor: {
+                        xtype: 'textfield'
+                    }
+                },
+                {
+                    xtype: 'actioncolumn',
+                    width: 80,
+                    items: [
+                        {
+                            iconCls: 'pimcore_icon_up',
+                            tooltip: t('move_up') || 'Move Up',
+                            handler: function(grid, rowIndex) {
+                                _this.moveField(rowIndex, -1);
+                            }
+                        },
+                        {
+                            iconCls: 'pimcore_icon_down',
+                            tooltip: t('move_down') || 'Move Down',
+                            handler: function(grid, rowIndex) {
+                                _this.moveField(rowIndex, 1);
+                            }
+                        },
+                        {
+                            iconCls: 'pimcore_icon_delete',
+                            tooltip: t('delete'),
+                            handler: function(grid, rowIndex) {
+                                _this.fieldsStore.removeAt(rowIndex);
+                            }
+                        }
+                    ]
+                }
+            ],
+            selModel: 'cellmodel',
+            plugins: {
+                ptype: 'cellediting',
+                clicksToEdit: 1
+            },
+            tbar: [
+                {
+                    text: t('add_field') || 'Add Field',
+                    iconCls: 'pimcore_icon_add',
+                    menu: {
+                        items: this.fieldTypes.map(function(fieldType) {
+                            return {
+                                text: fieldType.text,
+                                iconCls: 'pimcore_icon_' + fieldType.value,
+                                handler: function() {
+                                    _this.addField(fieldType.value);
+                                }
+                            };
+                        })
+                    }
+                }
+            ]
+        });
 
         // Create window
         this.window = new Ext.Window({
-            title: t('edit_fields') + ': ' + this.typeName,
-            width: 800,
+            title: (t('edit_fields') || 'Edit Fields') + ': ' + this.typeName,
+            width: 900,
             height: 500,
             modal: true,
             layout: 'border',
             items: [
                 {
-                    region: 'west',
-                    title: t('available_fields'),
-                    width: 250,
-                    split: true,
-                    items: [availableFieldsTree]
+                    region: 'north',
+                    xtype: 'panel',
+                    height: 40,
+                    bodyStyle: 'padding: 10px;',
+                    html: '<div class="extended-block-info">' +
+                        (t('fields_editor_help') || 'Double-click cells to edit. Use the + menu to add fields. Drag rows to reorder.') +
+                        '</div>'
                 },
-                {
-                    region: 'center',
-                    title: t('selected_fields'),
-                    layout: 'fit',
-                    items: [selectedFieldsTree]
-                }
+                this.fieldsGrid
             ],
             buttons: [
                 {
@@ -457,192 +658,42 @@ pimcore.object.classes.data.extendedBlock.fieldsEditor = Class.create({
     },
 
     /**
-     * Creates the available fields tree.
-     *
-     * @returns {Ext.tree.Panel} The available fields tree
-     */
-    createAvailableFieldsTree: function() {
-        var children = [
-            { text: t('input'), leaf: true, iconCls: 'pimcore_icon_input', fieldtype: 'input' },
-            { text: t('textarea'), leaf: true, iconCls: 'pimcore_icon_textarea', fieldtype: 'textarea' },
-            { text: t('wysiwyg'), leaf: true, iconCls: 'pimcore_icon_wysiwyg', fieldtype: 'wysiwyg' },
-            { text: t('numeric'), leaf: true, iconCls: 'pimcore_icon_numeric', fieldtype: 'numeric' },
-            { text: t('checkbox'), leaf: true, iconCls: 'pimcore_icon_checkbox', fieldtype: 'checkbox' },
-            { text: t('date'), leaf: true, iconCls: 'pimcore_icon_date', fieldtype: 'date' },
-            { text: t('select'), leaf: true, iconCls: 'pimcore_icon_select', fieldtype: 'select' },
-            { text: t('multiselect'), leaf: true, iconCls: 'pimcore_icon_multiselect', fieldtype: 'multiselect' },
-            { text: t('link'), leaf: true, iconCls: 'pimcore_icon_link', fieldtype: 'link' },
-            { text: t('image'), leaf: true, iconCls: 'pimcore_icon_image', fieldtype: 'image' },
-            { text: t('localized_fields'), leaf: true, iconCls: 'pimcore_icon_localizedfields', fieldtype: 'localizedfields' }
-        ];
-
-        return new Ext.tree.Panel({
-            store: new Ext.data.TreeStore({
-                root: {
-                    expanded: true,
-                    children: children
-                }
-            }),
-            rootVisible: false,
-            viewConfig: {
-                plugins: {
-                    ptype: 'treeviewdragdrop',
-                    enableDrag: true,
-                    enableDrop: false,
-                    ddGroup: 'extendedBlockFields'
-                }
-            }
-        });
-    },
-
-    /**
-     * Creates the selected fields tree.
-     *
-     * @returns {Ext.tree.Panel} The selected fields tree
-     */
-    createSelectedFieldsTree: function() {
-        var _this = this;
-
-        // Convert fields to tree structure
-        var children = [];
-        for (var i = 0; i < this.fields.length; i++) {
-            var field = this.fields[i];
-            children.push({
-                text: field.name || field.fieldtype,
-                leaf: true,
-                iconCls: 'pimcore_icon_' + field.fieldtype,
-                fieldData: field
-            });
-        }
-
-        this.selectedFieldsTree = new Ext.tree.Panel({
-            store: new Ext.data.TreeStore({
-                root: {
-                    expanded: true,
-                    children: children
-                }
-            }),
-            rootVisible: false,
-            viewConfig: {
-                plugins: {
-                    ptype: 'treeviewdragdrop',
-                    enableDrag: true,
-                    enableDrop: true,
-                    ddGroup: 'extendedBlockFields'
-                },
-                listeners: {
-                    drop: function(node, data) {
-                        // Handle drop from available fields
-                        if (data.records && data.records[0].get('fieldtype')) {
-                            var fieldtype = data.records[0].get('fieldtype');
-                            _this.showFieldConfigWindow(fieldtype, data.records[0]);
-                        }
-                    }
-                }
-            },
-            listeners: {
-                itemdblclick: function(view, record) {
-                    // Edit field on double click
-                    if (record.get('fieldData')) {
-                        _this.showFieldConfigWindow(
-                            record.get('fieldData').fieldtype,
-                            record,
-                            record.get('fieldData')
-                        );
-                    }
-                }
-            }
-        });
-
-        return this.selectedFieldsTree;
-    },
-
-    /**
-     * Shows the field configuration window.
+     * Adds a new field to the grid.
      *
      * @param {string} fieldtype - The field type
-     * @param {Object} treeNode - The tree node
-     * @param {Object} existingData - Existing field data for editing
      */
-    showFieldConfigWindow: function(fieldtype, treeNode, existingData) {
-        var _this = this;
-        existingData = existingData || {};
+    addField: function(fieldtype) {
+        var count = this.fieldsStore.getCount() + 1;
+        var fieldName = fieldtype + '_' + count;
 
-        var window = new Ext.Window({
-            title: t('configure_field') + ': ' + fieldtype,
-            width: 400,
-            modal: true,
-            layout: 'fit',
-            items: [
-                {
-                    xtype: 'form',
-                    bodyStyle: 'padding: 10px;',
-                    items: [
-                        {
-                            xtype: 'textfield',
-                            fieldLabel: t('name'),
-                            name: 'name',
-                            value: existingData.name || '',
-                            allowBlank: false,
-                            width: '100%'
-                        },
-                        {
-                            xtype: 'textfield',
-                            fieldLabel: t('title'),
-                            name: 'title',
-                            value: existingData.title || '',
-                            width: '100%'
-                        }
-                    ]
-                }
-            ],
-            buttons: [
-                {
-                    text: t('save'),
-                    handler: function() {
-                        var form = window.down('form');
-                        var values = form.getForm().getFieldValues();
+        // Generate a nice title from the name
+        var fieldTitle = fieldtype.charAt(0).toUpperCase() + fieldtype.slice(1) + ' ' + count;
 
-                        if (!values.name) {
-                            Ext.Msg.alert(t('error'), t('name_required'));
-                            return;
-                        }
-
-                        // Update or add field
-                        var fieldData = {
-                            fieldtype: fieldtype,
-                            name: values.name,
-                            title: values.title
-                        };
-
-                        if (existingData.name) {
-                            // Update existing
-                            treeNode.set('text', values.name);
-                            treeNode.set('fieldData', fieldData);
-                        } else {
-                            // Add new
-                            var rootNode = _this.selectedFieldsTree.getRootNode();
-                            rootNode.appendChild({
-                                text: values.name,
-                                leaf: true,
-                                iconCls: 'pimcore_icon_' + fieldtype,
-                                fieldData: fieldData
-                            });
-                        }
-
-                        window.close();
-                    }
-                },
-                {
-                    text: t('cancel'),
-                    handler: function() {
-                        window.close();
-                    }
-                }
-            ]
+        this.fieldsStore.add({
+            fieldtype: fieldtype,
+            name: fieldName,
+            title: fieldTitle,
+            tooltip: ''
         });
+    },
 
-        window.show();
+    /**
+     * Moves a field up or down in the list.
+     *
+     * @param {number} rowIndex - The row index
+     * @param {number} direction - Direction (-1 for up, 1 for down)
+     */
+    moveField: function(rowIndex, direction) {
+        var newIndex = rowIndex + direction;
+        var store = this.fieldsStore;
+
+        if (newIndex < 0 || newIndex >= store.getCount()) {
+            return;
+        }
+
+        var record = store.getAt(rowIndex);
+        store.removeAt(rowIndex);
+        store.insert(newIndex, record);
     },
 
     /**
@@ -650,11 +701,17 @@ pimcore.object.classes.data.extendedBlock.fieldsEditor = Class.create({
      */
     save: function() {
         var fields = [];
-        var rootNode = this.selectedFieldsTree.getRootNode();
 
-        rootNode.eachChild(function(node) {
-            if (node.get('fieldData')) {
-                fields.push(node.get('fieldData'));
+        this.fieldsStore.each(function(record) {
+            var data = record.getData();
+            // Only include fields with valid names
+            if (data.name && data.name.length > 0) {
+                fields.push({
+                    fieldtype: data.fieldtype,
+                    name: data.name,
+                    title: data.title || '',
+                    tooltip: data.tooltip || ''
+                });
             }
         });
 
