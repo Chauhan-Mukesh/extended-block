@@ -9,7 +9,7 @@ This document provides comprehensive documentation for working with the Extended
 - [ExtendedBlockContainer API](#extendedblockcontainer-api)
 - [ExtendedBlockItem API](#extendedblockitem-api)
 - [CRUD Operations](#crud-operations)
-- [Localized Fields](#localized-fields)
+- [Per-Item Localization](#per-item-localization)
 - [Querying Block Data](#querying-block-data)
 - [Working with Multiple Block Types](#working-with-multiple-block-types)
 - [Best Practices](#best-practices)
@@ -22,7 +22,9 @@ The Extended Block bundle provides a PHP API that is similar to Pimcore's standa
 - Better query performance
 - Direct SQL queryability
 - Proper relational data modeling
-- Support for localized fields
+- Per-item localized data storage (via ExtendedBlockItem methods)
+
+> **Note:** Pimcore's LocalizedFields data type cannot be used inside ExtendedBlock. However, ExtendedBlockItem provides its own localization methods (`setLocalizedValue`, `getLocalizedValue`) for storing per-item translations.
 
 ### Key Classes
 
@@ -647,9 +649,11 @@ $container->clear();
 $product->save();
 ```
 
-## Localized Fields
+## Per-Item Localization
 
-Extended Block supports localized fields within block items, allowing you to store translations.
+ExtendedBlockItem provides built-in methods for storing localized data per block item. This is different from Pimcore's LocalizedFields data type (which is NOT supported inside ExtendedBlock). Instead, ExtendedBlockItem has its own localization methods.
+
+> **Important:** This is NOT the same as Pimcore's LocalizedFields. You cannot add a LocalizedFields container inside ExtendedBlock. The localization methods here store data in a separate localized table specific to ExtendedBlock.
 
 ### Setting Up Localized Content
 
@@ -660,11 +664,11 @@ use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockItem;
 
 $item = new ExtendedBlockItem('content_block', 0);
 
-// Set non-localized fields
+// Set regular field values (stored in main table)
 $item->setFieldValue('image', '/path/to/image.jpg');
 $item->setFieldValue('link', '/products/detail');
 
-// Set localized fields for each language
+// Set per-item localized values (stored in localized table)
 $item->setLocalizedValue('en', 'title', 'English Title');
 $item->setLocalizedValue('en', 'description', 'English description text');
 
@@ -828,14 +832,14 @@ Extended Block supports multiple block types, each with different field configur
 
 ### Example Block Type Structure
 
+> **Note:** LocalizedFields data type is NOT allowed inside ExtendedBlock. Use ExtendedBlockItem's per-item localization methods instead.
+
 ```
 contentBlocks (Extended Block Field)
 ├── text_block
 │   ├── title (Input)
 │   ├── content (WYSIWYG)
-│   └── LocalizedFields
-│       ├── headline (Input)
-│       └── teaser (Textarea)
+│   └── description (Textarea)
 ├── image_block
 │   ├── image (Image)
 │   ├── caption (Input)
@@ -844,6 +848,12 @@ contentBlocks (Extended Block Field)
     ├── videoUrl (Input)
     ├── thumbnail (Image)
     └── autoplay (Checkbox)
+```
+
+For per-item localized content, use ExtendedBlockItem's localization methods:
+```php
+$textBlock->setLocalizedValue('en', 'headline', 'Welcome');
+$textBlock->setLocalizedValue('de', 'headline', 'Willkommen');
 ```
 
 ### Creating Different Block Types

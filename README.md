@@ -353,7 +353,7 @@ $objectIds = $db->fetchFirstColumn(
 );
 ```
 
-For more detailed examples including CRUD operations, localized fields, working with multiple block types, and best practices, see the [PHP API Documentation](doc/PHP_API.md).
+For more detailed examples including CRUD operations, per-item localization, working with multiple block types, and best practices, see the [PHP API Documentation](doc/PHP_API.md).
 
 ## 🏗️ Architecture
 

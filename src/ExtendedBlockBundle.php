@@ -30,8 +30,8 @@ use Pimcore\Extension\Bundle\Traits\BundleAdminClassicTrait;
  *
  * Key features:
  * - Separate table storage for each block type definition
- * - Full support for localized fields within block items
- * - Prevention of recursive ExtendedBlock in LocalizedFields
+ * - Per-item localized data storage (independent of Pimcore's LocalizedFields)
+ * - Prevention of recursive ExtendedBlock nesting
  * - Performance optimized database queries
  * - Complete admin UI integration
  *
