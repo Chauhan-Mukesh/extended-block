@@ -70,6 +70,12 @@ class Configuration implements ConfigurationInterface
                     ->info('Enable strict validation to prevent ExtendedBlock nesting in LocalizedFields')
                 ->end()
 
+                // Enable localized fields support (reserved for future use)
+                ->booleanNode('enable_localized_fields')
+                    ->defaultFalse()
+                    ->info('Reserved for future use - LocalizedFields are currently not supported within ExtendedBlock')
+                ->end()
+
                 // Maximum items allowed in a single extended block
                 ->integerNode('max_items')
                     ->defaultNull()
