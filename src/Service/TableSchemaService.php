@@ -326,24 +326,23 @@ class TableSchemaService
             '`type` VARCHAR(100) NOT NULL DEFAULT "default" COMMENT "Block type identifier"',
         ];
 
-        // Add columns for each field in block definitions
-        foreach ($fieldDefinition->getBlockDefinitions() as $blockDef) {
-            if (isset($blockDef['fields'])) {
-                foreach ($blockDef['fields'] as $field) {
-                    if ($field instanceof Data && !($field instanceof Localizedfields)) {
-                        $columnType = $field->getColumnType();
-                        if ($columnType) {
-                            // Validate field name before using it as column name
-                            $fieldName = $field->getName();
-                            IdentifierValidator::validateColumnName($fieldName);
-                            $quotedField = $this->db->quoteIdentifier($fieldName);
-                            $columns[] = sprintf(
-                                '%s %s COMMENT "%s"',
-                                $quotedField,
-                                $columnType,
-                                addslashes($field->getTitle() ?: $fieldName)
-                            );
-                        }
+        // Add columns for each field in children definitions
+        foreach ($fieldDefinition->getFieldDefinitions() as $field) {
+            if (!$field instanceof Localizedfields) {
+                // Use method_exists to safely call getColumnType
+                if (method_exists($field, 'getColumnType')) {
+                    $columnType = $field->getColumnType();
+                    if ($columnType) {
+                        // Validate field name before using it as column name
+                        $fieldName = $field->getName();
+                        IdentifierValidator::validateColumnName($fieldName);
+                        $quotedField = $this->db->quoteIdentifier($fieldName);
+                        $columns[] = sprintf(
+                            '%s %s COMMENT "%s"',
+                            $quotedField,
+                            $columnType,
+                            addslashes($field->getTitle() ?: $fieldName)
+                        );
                     }
                 }
             }
@@ -376,30 +375,8 @@ class TableSchemaService
             '`language` VARCHAR(10) NOT NULL COMMENT "Language code (e.g., en, de)"',
         ];
 
-        // Add localized field columns
-        foreach ($fieldDefinition->getBlockDefinitions() as $blockDef) {
-            if (isset($blockDef['fields'])) {
-                foreach ($blockDef['fields'] as $field) {
-                    if ($field instanceof Localizedfields) {
-                        foreach ($field->getFieldDefinitions() as $localizedField) {
-                            $columnType = $localizedField->getColumnType();
-                            if ($columnType) {
-                                // Validate field name before using it as column name
-                                $fieldName = $localizedField->getName();
-                                IdentifierValidator::validateColumnName($fieldName);
-                                $quotedField = $this->db->quoteIdentifier($fieldName);
-                                $columns[] = sprintf(
-                                    '%s %s COMMENT "%s (localized)"',
-                                    $quotedField,
-                                    $columnType,
-                                    addslashes($localizedField->getTitle() ?: $fieldName)
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // Note: LocalizedFields not allowed in ExtendedBlock
+        // This method creates base localized table structure only
 
         // Add indexes
         $columns[] = 'PRIMARY KEY (`id`)';
@@ -429,17 +406,16 @@ class TableSchemaService
             'type' => 'VARCHAR(100) NOT NULL DEFAULT "default"',
         ];
 
-        foreach ($fieldDefinition->getBlockDefinitions() as $blockDef) {
-            if (isset($blockDef['fields'])) {
-                foreach ($blockDef['fields'] as $field) {
-                    if ($field instanceof Data && !($field instanceof Localizedfields)) {
-                        $columnType = $field->getColumnType();
-                        if ($columnType) {
-                            // Validate field name before using it as column name
-                            $fieldName = $field->getName();
-                            IdentifierValidator::validateColumnName($fieldName);
-                            $columns[$fieldName] = $columnType;
-                        }
+        foreach ($fieldDefinition->getFieldDefinitions() as $field) {
+            if (!$field instanceof Localizedfields) {
+                // Use method_exists to safely call getColumnType
+                if (method_exists($field, 'getColumnType')) {
+                    $columnType = $field->getColumnType();
+                    if ($columnType) {
+                        // Validate field name before using it as column name
+                        $fieldName = $field->getName();
+                        IdentifierValidator::validateColumnName($fieldName);
+                        $columns[$fieldName] = $columnType;
                     }
                 }
             }
@@ -465,23 +441,8 @@ class TableSchemaService
             'language' => 'VARCHAR(10) NOT NULL',
         ];
 
-        foreach ($fieldDefinition->getBlockDefinitions() as $blockDef) {
-            if (isset($blockDef['fields'])) {
-                foreach ($blockDef['fields'] as $field) {
-                    if ($field instanceof Localizedfields) {
-                        foreach ($field->getFieldDefinitions() as $localizedField) {
-                            $columnType = $localizedField->getColumnType();
-                            if ($columnType) {
-                                // Validate field name before using it as column name
-                                $fieldName = $localizedField->getName();
-                                IdentifierValidator::validateColumnName($fieldName);
-                                $columns[$fieldName] = $columnType;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // Note: LocalizedFields not allowed in ExtendedBlock
+        // This method returns base columns only
 
         return $columns;
     }

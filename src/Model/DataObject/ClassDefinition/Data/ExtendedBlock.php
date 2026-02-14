@@ -120,6 +120,31 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
     public bool $lazyLoading = true;
 
     /**
+     * Whether to allow localized fields inside this block.
+     */
+    public bool $allowLocalizedFields = false;
+
+    /**
+     * Flag to indicate this block should not be added inside LocalizedFields.
+     * Set when the block contains localized fields itself.
+     */
+    public bool $disallowAddingInLocalizedField = false;
+
+    /**
+     * Child field definitions (following Pimcore Block pattern).
+     *
+     * @var array<Data|Layout>
+     */
+    public array $children = [];
+
+    /**
+     * Cached field definitions for quick lookup.
+     *
+     * @var array<string, Data>|null
+     */
+    protected ?array $fieldDefinitionsCache = null;
+
+    /**
      * Database table prefix for this extended block.
      */
     protected string $tablePrefix = 'object_eb_';
@@ -182,7 +207,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      *
      * ExtendedBlock stores data in separate tables, so returns empty array.
      *
-     * @return array|string The query column type
+     * @return array<string, string>|string The query column type
      */
     public function getQueryColumnType(): array|string
     {
@@ -343,17 +368,16 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
 
         $item->setId((int) $row['id']);
 
-        // Map row data to item fields based on block definition
-        $blockDef = $this->blockDefinitions[$type] ?? null;
-        if ($blockDef && isset($blockDef['fields'])) {
-            foreach ($blockDef['fields'] as $fieldDef) {
-                if ($fieldDef instanceof Data) {
-                    $fieldName = $fieldDef->getName();
-                    if (isset($row[$fieldName])) {
-                        $value = $fieldDef->getDataFromResource($row[$fieldName], $object);
-                        $item->setFieldValue($fieldName, $value);
-                    }
+        // Map row data to item fields based on children field definitions
+        foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
+            if (isset($row[$fieldName])) {
+                // Use the concrete field type's method if available
+                if (method_exists($fieldDef, 'getDataFromResource')) {
+                    $value = $fieldDef->getDataFromResource($row[$fieldName], $object);
+                } else {
+                    $value = $row[$fieldName];
                 }
+                $item->setFieldValue($fieldName, $value);
             }
         }
 
@@ -427,13 +451,9 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      */
     public function hasLocalizedFields(): bool
     {
-        foreach ($this->blockDefinitions as $blockDef) {
-            if (isset($blockDef['fields'])) {
-                foreach ($blockDef['fields'] as $field) {
-                    if ($field instanceof Localizedfields) {
-                        return true;
-                    }
-                }
+        foreach ($this->children as $field) {
+            if ($field instanceof Localizedfields) {
+                return true;
             }
         }
 
@@ -524,14 +544,15 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
             'type' => $item->getType(),
         ];
 
-        // Add field values based on block definition
-        $blockDef = $this->blockDefinitions[$item->getType()] ?? null;
-        if ($blockDef && isset($blockDef['fields'])) {
-            foreach ($blockDef['fields'] as $fieldDef) {
-                if ($fieldDef instanceof Data && !($fieldDef instanceof Localizedfields)) {
-                    $fieldName = $fieldDef->getName();
-                    $value = $item->getFieldValue($fieldName);
+        // Add field values based on children field definitions
+        foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
+            if (!$fieldDef instanceof Localizedfields) {
+                $value = $item->getFieldValue($fieldName);
+                // Use the concrete field type's method if available
+                if (method_exists($fieldDef, 'getDataForResource')) {
                     $data[$fieldName] = $fieldDef->getDataForResource($value, $object);
+                } else {
+                    $data[$fieldName] = $value;
                 }
             }
         }
@@ -591,21 +612,8 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                     'language' => $language,
                 ];
 
-                // Add localized field values
-                $blockDef = $this->blockDefinitions[$item->getType()] ?? null;
-                if ($blockDef && isset($blockDef['fields'])) {
-                    foreach ($blockDef['fields'] as $fieldDef) {
-                        if ($fieldDef instanceof Localizedfields) {
-                            foreach ($fieldDef->getFieldDefinitions() as $localizedFieldDef) {
-                                $fieldName = $localizedFieldDef->getName();
-                                $value = $localizedData[$language][$fieldName] ?? null;
-                                if (null !== $value) {
-                                    $data[$fieldName] = $localizedFieldDef->getDataForResource($value, $object);
-                                }
-                            }
-                        }
-                    }
-                }
+                // Add localized field values - Note: LocalizedFields not allowed in ExtendedBlock
+                // This code path is kept for backward compatibility but should not be reached
 
                 // DBAL's insert method uses parameterized queries, which is safe
                 $db->insert($localizedTableName, $data);
@@ -756,19 +764,18 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
             '`type` VARCHAR(100) NOT NULL DEFAULT "default"',
         ];
 
-        // Add columns for each field in block definitions
-        foreach ($this->blockDefinitions as $blockDef) {
-            if (isset($blockDef['fields'])) {
-                foreach ($blockDef['fields'] as $fieldDef) {
-                    if ($fieldDef instanceof Data && !($fieldDef instanceof Localizedfields)) {
-                        $columnType = $fieldDef->getColumnType();
-                        if ($columnType) {
-                            // Validate field name before using it as column name
-                            $fieldName = $fieldDef->getName();
-                            IdentifierValidator::validateColumnName($fieldName);
-                            $quotedColumn = $db->quoteIdentifier($fieldName);
-                            $columns[] = "{$quotedColumn} {$columnType}";
-                        }
+        // Add columns for each field in children definitions
+        foreach ($this->getFieldDefinitions() as $fieldDef) {
+            if (!$fieldDef instanceof Localizedfields) {
+                // Use method_exists to safely call getColumnType
+                if (method_exists($fieldDef, 'getColumnType')) {
+                    $columnType = $fieldDef->getColumnType();
+                    if ($columnType) {
+                        // Validate field name before using it as column name
+                        $fieldName = $fieldDef->getName();
+                        IdentifierValidator::validateColumnName($fieldName);
+                        $quotedColumn = $db->quoteIdentifier($fieldName);
+                        $columns[] = "{$quotedColumn} {$columnType}";
                     }
                 }
             }
@@ -818,25 +825,8 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
             '`language` VARCHAR(10) NOT NULL',
         ];
 
-        // Add columns for localized fields
-        foreach ($this->blockDefinitions as $blockDef) {
-            if (isset($blockDef['fields'])) {
-                foreach ($blockDef['fields'] as $fieldDef) {
-                    if ($fieldDef instanceof Localizedfields) {
-                        foreach ($fieldDef->getFieldDefinitions() as $localizedFieldDef) {
-                            $columnType = $localizedFieldDef->getColumnType();
-                            if ($columnType) {
-                                // Validate field name before using it as column name
-                                $fieldName = $localizedFieldDef->getName();
-                                IdentifierValidator::validateColumnName($fieldName);
-                                $quotedColumn = $db->quoteIdentifier($fieldName);
-                                $columns[] = "{$quotedColumn} {$columnType}";
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // Note: LocalizedFields not allowed in ExtendedBlock, so this table
+        // will have only base columns. Kept for backward compatibility.
 
         $columns[] = 'PRIMARY KEY (`id`)';
         $columns[] = 'INDEX `ooo_id` (`ooo_id`)';
@@ -852,12 +842,12 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      * Validates the field configuration.
      *
      * Checks for:
-     * - Valid block definitions
+     * - Valid children field definitions
      * - No nested ExtendedBlock
      * - No Block inside ExtendedBlock
      * - No Fieldcollections inside ExtendedBlock
      * - No Objectbricks inside ExtendedBlock
-     * - No invalid fields inside LocalizedFields within ExtendedBlock
+     * - No LocalizedFields inside ExtendedBlock
      *
      * @throws \Exception If validation fails
      */
@@ -868,52 +858,31 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
             throw new \Exception('ExtendedBlock with localized fields cannot be added inside a LocalizedFields container. This would create an infinite recursion. Please restructure your class definition.');
         }
 
-        // Validate block definitions
-        foreach ($this->blockDefinitions as $typeName => $blockDef) {
-            if (empty($typeName)) {
-                throw new \Exception('Block type name cannot be empty');
+        // Validate children field definitions
+        foreach ($this->children as $field) {
+            // Check for nested ExtendedBlock
+            if ($field instanceof self) {
+                throw new \Exception('ExtendedBlock cannot contain another ExtendedBlock.');
             }
 
-            if (isset($blockDef['fields'])) {
-                foreach ($blockDef['fields'] as $field) {
-                    // Check for nested ExtendedBlock
-                    if ($field instanceof self) {
-                        throw new \Exception("ExtendedBlock cannot contain another ExtendedBlock. Type: {$typeName}");
-                    }
+            // Check for Block inside ExtendedBlock
+            if ($field instanceof Block) {
+                throw new \Exception('ExtendedBlock cannot contain a Block. Block nesting is not supported to ensure data integrity and prevent performance issues.');
+            }
 
-                    // Check for Block inside ExtendedBlock
-                    if ($field instanceof Block) {
-                        throw new \Exception("ExtendedBlock cannot contain a Block. Type: {$typeName}. ".'Block nesting is not supported to ensure data integrity and prevent performance issues.');
-                    }
+            // Check for Fieldcollections inside ExtendedBlock
+            if ($field instanceof Fieldcollections) {
+                throw new \Exception('ExtendedBlock cannot contain Fieldcollections. Fieldcollections are complex container types that cannot be nested inside ExtendedBlock.');
+            }
 
-                    // Check for Fieldcollections inside ExtendedBlock
-                    if ($field instanceof Fieldcollections) {
-                        throw new \Exception("ExtendedBlock cannot contain Fieldcollections. Type: {$typeName}. ".'Fieldcollections are complex container types that cannot be nested inside ExtendedBlock.');
-                    }
+            // Check for Objectbricks inside ExtendedBlock
+            if ($field instanceof Objectbricks) {
+                throw new \Exception('ExtendedBlock cannot contain Objectbricks. Objectbricks are complex container types that cannot be nested inside ExtendedBlock.');
+            }
 
-                    // Check for Objectbricks inside ExtendedBlock
-                    if ($field instanceof Objectbricks) {
-                        throw new \Exception("ExtendedBlock cannot contain Objectbricks. Type: {$typeName}. ".'Objectbricks are complex container types that cannot be nested inside ExtendedBlock.');
-                    }
-
-                    // Check for invalid fields inside LocalizedFields within ExtendedBlock
-                    if ($field instanceof Localizedfields) {
-                        foreach ($field->getFieldDefinitions() as $localizedField) {
-                            if ($localizedField instanceof self) {
-                                throw new \Exception('ExtendedBlock cannot be placed inside LocalizedFields within an ExtendedBlock. '."Type: {$typeName}");
-                            }
-                            if ($localizedField instanceof Block) {
-                                throw new \Exception('Block cannot be placed inside LocalizedFields within an ExtendedBlock. '."Type: {$typeName}. Block nesting is not supported.");
-                            }
-                            if ($localizedField instanceof Fieldcollections) {
-                                throw new \Exception('Fieldcollections cannot be placed inside LocalizedFields within an ExtendedBlock. '."Type: {$typeName}");
-                            }
-                            if ($localizedField instanceof Objectbricks) {
-                                throw new \Exception('Objectbricks cannot be placed inside LocalizedFields within an ExtendedBlock. '."Type: {$typeName}");
-                            }
-                        }
-                    }
-                }
+            // Check for LocalizedFields inside ExtendedBlock
+            if ($field instanceof Localizedfields) {
+                throw new \Exception('ExtendedBlock cannot contain LocalizedFields. Localized fields are not supported inside ExtendedBlock.');
             }
         }
     }
@@ -968,7 +937,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      * @param Concrete|null        $object The parent object
      * @param array<string, mixed> $params Additional parameters
      *
-     * @return array<string, mixed>|null The editmode data
+     * @return array<int, array<string, mixed>>|null The editmode data
      */
     public function getDataForEditmode(mixed $data, ?Concrete $object = null, array $params = []): ?array
     {
@@ -986,25 +955,15 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                 'localizedData' => [],
             ];
 
-            // Get field data
-            $blockDef = $this->blockDefinitions[$item->getType()] ?? null;
-            if ($blockDef && isset($blockDef['fields'])) {
-                foreach ($blockDef['fields'] as $fieldDef) {
-                    if ($fieldDef instanceof Data && !($fieldDef instanceof Localizedfields)) {
-                        $fieldName = $fieldDef->getName();
-                        $value = $item->getFieldValue($fieldName);
+            // Get field data from children definitions
+            foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
+                if (!$fieldDef instanceof Localizedfields) {
+                    $value = $item->getFieldValue($fieldName);
+                    // Use method_exists to safely call getDataForEditmode
+                    if (method_exists($fieldDef, 'getDataForEditmode')) {
                         $itemData['data'][$fieldName] = $fieldDef->getDataForEditmode($value, $object);
-                    } elseif ($fieldDef instanceof Localizedfields) {
-                        // Handle localized data
-                        $localizedData = $item->getLocalizedData();
-                        foreach ($localizedData as $language => $langData) {
-                            $itemData['localizedData'][$language] = [];
-                            foreach ($fieldDef->getFieldDefinitions() as $localizedFieldDef) {
-                                $fieldName = $localizedFieldDef->getName();
-                                $value = $langData[$fieldName] ?? null;
-                                $itemData['localizedData'][$language][$fieldName] = $localizedFieldDef->getDataForEditmode($value, $object);
-                            }
-                        }
+                    } else {
+                        $itemData['data'][$fieldName] = $value;
                     }
                 }
             }
@@ -1051,29 +1010,17 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                 $item->setId((int) $itemData['id']);
             }
 
-            // Process field data
-            $blockDef = $this->blockDefinitions[$type] ?? null;
-            if ($blockDef && isset($blockDef['fields'])) {
-                foreach ($blockDef['fields'] as $fieldDef) {
-                    if ($fieldDef instanceof Data && !($fieldDef instanceof Localizedfields)) {
-                        $fieldName = $fieldDef->getName();
-                        if (isset($itemData['data'][$fieldName])) {
+            // Process field data from children definitions
+            foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
+                if (!$fieldDef instanceof Localizedfields) {
+                    if (isset($itemData['data'][$fieldName])) {
+                        // Use method_exists to safely call getDataFromEditmode
+                        if (method_exists($fieldDef, 'getDataFromEditmode')) {
                             $value = $fieldDef->getDataFromEditmode($itemData['data'][$fieldName], $object);
                             $item->setFieldValue($fieldName, $value);
+                        } else {
+                            $item->setFieldValue($fieldName, $itemData['data'][$fieldName]);
                         }
-                    } elseif ($fieldDef instanceof Localizedfields && isset($itemData['localizedData'])) {
-                        // Handle localized data
-                        $localizedData = [];
-                        foreach ($itemData['localizedData'] as $language => $langData) {
-                            $localizedData[$language] = [];
-                            foreach ($fieldDef->getFieldDefinitions() as $localizedFieldDef) {
-                                $fieldName = $localizedFieldDef->getName();
-                                if (isset($langData[$fieldName])) {
-                                    $localizedData[$language][$fieldName] = $localizedFieldDef->getDataFromEditmode($langData[$fieldName], $object);
-                                }
-                            }
-                        }
-                        $item->setLocalizedData($localizedData);
                     }
                 }
             }
@@ -1085,13 +1032,13 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
     }
 
     /**
-     * Returns data for JSON export.
+     * Returns data for version preview.
      *
      * @param mixed                $data   The block data
      * @param Concrete|null        $object The parent object
      * @param array<string, mixed> $params Additional parameters
      *
-     * @return array<string, mixed>|null The JSON-serializable data
+     * @return string|null The HTML preview string
      */
     public function getDataForVersionPreview(mixed $data, ?Concrete $object = null, array $params = []): ?string
     {
@@ -1135,19 +1082,18 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
                 return false;
             }
 
-            // Compare field values
-            $blockDef = $this->blockDefinitions[$oldItem->getType()] ?? null;
-            if ($blockDef && isset($blockDef['fields'])) {
-                foreach ($blockDef['fields'] as $fieldDef) {
-                    if ($fieldDef instanceof Data) {
-                        $fieldName = $fieldDef->getName();
-                        if (!$fieldDef->isEqual(
-                            $oldItem->getFieldValue($fieldName),
-                            $newItem->getFieldValue($fieldName)
-                        )) {
-                            return false;
-                        }
+            // Compare field values from children definitions
+            foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
+                $oldFieldValue = $oldItem->getFieldValue($fieldName);
+                $newFieldValue = $newItem->getFieldValue($fieldName);
+
+                // Use method_exists to safely call isEqual
+                if (method_exists($fieldDef, 'isEqual')) {
+                    if (!$fieldDef->isEqual($oldFieldValue, $newFieldValue)) {
+                        return false;
                     }
+                } elseif ($oldFieldValue !== $newFieldValue) {
+                    return false;
                 }
             }
         }
@@ -1158,7 +1104,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
     /**
      * Returns the parameter data for the object getter.
      *
-     * @return mixed The getter parameter data
+     * @return string|null The getter parameter type
      */
     public function getParameterTypeDeclaration(): ?string
     {
@@ -1192,7 +1138,7 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
      * @param Concrete             $object The object
      * @param array<string, mixed> $params Parameters
      *
-     * @return array<string, mixed>|null The exported data
+     * @return array<int, array<string, mixed>>|null The exported data
      */
     public function getVarExporterData(mixed $value, Concrete $object, array $params = []): ?array
     {
@@ -1239,6 +1185,8 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
 
     /**
      * @return array<string, array<string, mixed>>
+     *
+     * @deprecated Use getChildren() instead. Block definitions are no longer used.
      */
     public function getBlockDefinitions(): array
     {
@@ -1247,95 +1195,14 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
 
     /**
      * @param array<string, array<string, mixed>> $blockDefinitions
+     *
+     * @deprecated Use setChildren() instead. Block definitions are no longer used.
      */
     public function setBlockDefinitions(array $blockDefinitions): static
     {
-        // Convert array-based field definitions to proper Data objects
-        foreach ($blockDefinitions as $typeName => &$blockDef) {
-            if (isset($blockDef['fields']) && is_array($blockDef['fields'])) {
-                $convertedFields = [];
-                foreach ($blockDef['fields'] as $fieldConfig) {
-                    $field = $this->convertFieldConfigToDataObject($fieldConfig);
-                    if ($field) {
-                        $convertedFields[] = $field;
-                    }
-                }
-                $blockDef['fields'] = $convertedFields;
-            }
-        }
-
         $this->blockDefinitions = $blockDefinitions;
 
         return $this;
-    }
-
-    /**
-     * Converts a field configuration array to a Pimcore Data object.
-     *
-     * @param array<string, mixed>|Data $fieldConfig The field configuration
-     *
-     * @return Data|null The Data object or null if conversion fails
-     */
-    protected function convertFieldConfigToDataObject(array|Data $fieldConfig): ?Data
-    {
-        // If it's already a Data object, return it directly
-        if ($fieldConfig instanceof Data) {
-            return $fieldConfig;
-        }
-
-        // If it's not an array, return null
-        if (!is_array($fieldConfig)) {
-            return null;
-        }
-
-        // Get the field type - check both 'fieldtype' (from JS) and 'datatype' keys
-        $fieldtype = $fieldConfig['fieldtype'] ?? $fieldConfig['datatype'] ?? null;
-        if (!$fieldtype) {
-            return null;
-        }
-
-        // Map simple type names to full class names
-        $typeMap = [
-            'input' => Data\Input::class,
-            'textarea' => Data\Textarea::class,
-            'wysiwyg' => Data\Wysiwyg::class,
-            'numeric' => Data\Numeric::class,
-            'checkbox' => Data\Checkbox::class,
-            'date' => Data\Date::class,
-            'select' => Data\Select::class,
-            'multiselect' => Data\Multiselect::class,
-            'link' => Data\Link::class,
-            'image' => Data\Image::class,
-        ];
-
-        $className = $typeMap[$fieldtype] ?? null;
-        if (!$className || !class_exists($className)) {
-            Logger::warning("ExtendedBlock: Unknown field type '{$fieldtype}'");
-
-            return null;
-        }
-
-        try {
-            /** @var Data $field */
-            $field = new $className();
-
-            // Set common properties
-            if (isset($fieldConfig['name'])) {
-                $field->setName($fieldConfig['name']);
-            }
-            if (isset($fieldConfig['title'])) {
-                $field->setTitle($fieldConfig['title']);
-            }
-            if (isset($fieldConfig['tooltip'])) {
-                $field->setTooltip($fieldConfig['tooltip']);
-            }
-
-            return $field;
-        } catch (\Exception $e) {
-            Logger::error("ExtendedBlock: Error creating field '{$fieldtype}': ".$e->getMessage());
-
-            return null;
-        }
     }
 
     public function isAllowLocalizedFields(): bool
@@ -1420,5 +1287,88 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
         $this->tablePrefix = $tablePrefix;
 
         return $this;
+    }
+
+    /**
+     * Returns the child field definitions.
+     *
+     * @return array<Data|Layout>
+     */
+    public function getChildren(): array
+    {
+        return $this->children;
+    }
+
+    /**
+     * Sets the child field definitions.
+     *
+     * @param array<Data|Layout> $children
+     */
+    public function setChildren(array $children): static
+    {
+        $this->children = $children;
+        $this->fieldDefinitionsCache = null;
+
+        return $this;
+    }
+
+    /**
+     * Checks if there are child field definitions.
+     */
+    public function hasChildren(): bool
+    {
+        return count($this->children) > 0;
+    }
+
+    /**
+     * Adds a child field definition.
+     */
+    public function addChild(Data|Layout $child): void
+    {
+        $this->children[] = $child;
+        $this->fieldDefinitionsCache = null;
+    }
+
+    /**
+     * Returns field definitions from children.
+     *
+     * @return array<string, Data>
+     */
+    public function getFieldDefinitions(): array
+    {
+        if (null !== $this->fieldDefinitionsCache) {
+            return $this->fieldDefinitionsCache;
+        }
+
+        $definitions = [];
+        foreach ($this->children as $child) {
+            if ($child instanceof Data) {
+                $definitions[$child->getName()] = $child;
+            }
+        }
+
+        $this->fieldDefinitionsCache = $definitions;
+
+        return $definitions;
+    }
+
+    /**
+     * Returns a specific field definition by name.
+     */
+    public function getFieldDefinition(string $name): ?Data
+    {
+        $definitions = $this->getFieldDefinitions();
+
+        return $definitions[$name] ?? null;
+    }
+
+    /**
+     * Sets field definitions (resets cache).
+     *
+     * @param array<string, Data>|null $definitions
+     */
+    public function setFieldDefinitions(?array $definitions): void
+    {
+        $this->fieldDefinitionsCache = $definitions;
     }
 }
