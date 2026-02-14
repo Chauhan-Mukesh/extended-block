@@ -130,6 +130,13 @@ class ExtendedBlockValidationTest extends TestCase
             $content,
             'Should have Objectbricks prevention error message'
         );
+
+        // Check for Classificationstore prevention
+        $this->assertStringContainsString(
+            'ExtendedBlock cannot contain Classificationstore',
+            $content,
+            'Should have Classificationstore prevention error message'
+        );
     }
 
     /**

@@ -21,6 +21,7 @@ use Pimcore\Db;
 use Pimcore\Logger;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Block;
+use Pimcore\Model\DataObject\ClassDefinition\Data\Classificationstore;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Fieldcollections;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Localizedfields;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Objectbricks;
@@ -631,6 +632,11 @@ class ExtendedBlock extends Data implements Data\QueryResourcePersistenceAwareIn
             // Check for LocalizedFields inside ExtendedBlock
             if ($field instanceof Localizedfields) {
                 throw new Exception('ExtendedBlock cannot contain LocalizedFields. Localized fields are not supported inside ExtendedBlock.');
+            }
+
+            // Check for Classificationstore inside ExtendedBlock
+            if ($field instanceof Classificationstore) {
+                throw new Exception('ExtendedBlock cannot contain Classificationstore. Classificationstore stores data in complex structures incompatible with ExtendedBlock\'s separate table storage.');
             }
         }
     }
