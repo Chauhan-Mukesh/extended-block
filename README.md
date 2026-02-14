@@ -433,8 +433,8 @@ ExtendedBlock can **only** be placed at the root level of a class definition. To
 |------------|--------|
 | ExtendedBlock | Would cause infinite recursion and complex data relationships |
 | Block | Standard Block uses different storage mechanism |
-| Fieldcollections | Complex container types cannot be nested |
-| Objectbricks | Complex container types cannot be nested |
+| FieldCollections | Complex container types cannot be nested |
+| ObjectBricks | Complex container types cannot be nested |
 | LocalizedFields | Complex table relationships would break storage logic |
 
 ### Examples
