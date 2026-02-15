@@ -49,7 +49,8 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
     currentElements: [],
 
     /**
-     * Layout definitions (unused, for compatibility)
+     * Layout definitions cache.
+     * Required by pimcore.object.helpers.edit mixin for getRecursiveLayout method.
      * @type {Object}
      */
     layoutDefinitions: {},
@@ -379,12 +380,22 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
         }
 
         // Build field items using Pimcore's getRecursiveLayout
+        // Parameters: layoutDef, noteditable, context, skipLayoutChildren, onlyLayoutChildren, dataProvider, disableLazyRendering
         var fieldConfig = this.fieldConfig;
 
         var context = this.getContext();
         context['subContainerType'] = 'extendedBlock';
         context['subContainerKey'] = fieldConfig.name;
         context['applyDefaults'] = true;
+
+        // Call getRecursiveLayout (from pimcore.object.helpers.edit mixin)
+        // - fieldConfig: layout definition with children
+        // - undefined: noteditable (use default)
+        // - context: context object with containerType, objectId, etc.
+        // - undefined: skipLayoutChildren (use default)
+        // - undefined: onlyLayoutChildren (use default)
+        // - undefined: dataProvider (will use 'this' as default)
+        // - true: disableLazyRendering (force immediate rendering)
         var items = this.getRecursiveLayout(fieldConfig, undefined, context, undefined, undefined, undefined, true);
 
         items = items.items;
