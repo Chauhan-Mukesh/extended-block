@@ -1372,11 +1372,13 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         \Doctrine\DBAL\Connection $db,
         string $tableName,
     ): void {
+        // Use quoted column names for SQL reserved keywords to prevent syntax errors
+        // Note: 'index' and 'type' are reserved keywords in SQL
         $data = [
-            'o_id' => $object->getId(),
-            'fieldname' => $this->getName(),
-            'index' => $index,
-            'type' => $item->getType(),
+            $db->quoteIdentifier('o_id') => $object->getId(),
+            $db->quoteIdentifier('fieldname') => $this->getName(),
+            $db->quoteIdentifier('index') => $index,
+            $db->quoteIdentifier('type') => $item->getType(),
         ];
 
         // Add field values based on children field definitions
@@ -1384,10 +1386,11 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             if (!$fieldDef instanceof Localizedfields) {
                 $value = $item->getFieldValue($fieldName);
                 // Use the concrete field type's method if available
+                // Quote column names to handle any reserved keywords in user-defined fields
                 if (method_exists($fieldDef, 'getDataForResource')) {
-                    $data[$fieldName] = $fieldDef->getDataForResource($value, $object);
+                    $data[$db->quoteIdentifier($fieldName)] = $fieldDef->getDataForResource($value, $object);
                 } else {
-                    $data[$fieldName] = $value;
+                    $data[$db->quoteIdentifier($fieldName)] = $value;
                 }
             }
         }
@@ -1442,9 +1445,10 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                     continue;
                 }
 
+                // Use quoted column names for consistency and to handle potential reserved keywords
                 $data = [
-                    'ooo_id' => $item->getId(),
-                    'language' => $language,
+                    $db->quoteIdentifier('ooo_id') => $item->getId(),
+                    $db->quoteIdentifier('language') => $language,
                 ];
 
                 // LocalizedFields are no longer supported in ExtendedBlock.
