@@ -20,7 +20,7 @@ pimcore.registerNS('pimcore.object.tags.extendedBlock');
  *
  * This class provides the admin interface following Pimcore's block pattern:
  * - Inline controls for add before/after, delete, move up/down
- * - Dynamic field rendering based on block definitions
+ * - Dynamic field rendering based on children definitions (like Pimcore Block)
  * - Full responsive design with auto-adjusting height/width
  *
  * Field restrictions: LocalizedFields, Block, ObjectBricks, FieldCollections, 
@@ -49,6 +49,13 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
     currentElements: [],
 
     /**
+     * Layout definitions cache.
+     * Required by pimcore.object.helpers.edit mixin for getRecursiveLayout method.
+     * @type {Object}
+     */
+    layoutDefinitions: {},
+
+    /**
      * Data fields reference
      * @type {Object}
      */
@@ -64,12 +71,14 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
         this.dirty = false;
         this.data = [];
         this.currentElements = [];
+        this.layoutDefinitions = {};
         this.dataFields = {};
 
         if (data) {
             this.data = data;
         }
-        this.fieldConfig = fieldConfig || {};
+        this.fieldConfig = {};
+        Ext.apply(this.fieldConfig, fieldConfig);
     },
 
     /**
@@ -145,9 +154,10 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
             for (var i = 0; i < this.data.length; i++) {
                 this.addBlockElement(
                     i,
-                    { oIndex: this.data[i].oIndex },
+                    {
+                        oIndex: this.data[i].oIndex
+                    },
                     this.data[i].data,
-                    this.data[i].type,
                     true
                 );
             }
@@ -159,16 +169,13 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
 
     /**
      * Creates inline toolbar controls for block elements.
+     * Follows Pimcore Block pattern with direct handlers.
      *
      * @param {Ext.Panel} blockElement - The block element panel (null for initial add button)
      * @returns {Ext.Toolbar} The toolbar with controls
      */
     getControls: function(blockElement) {
-        var _this = this;
         var items = [];
-
-        // Get block type menu items
-        var blockTypeMenuItems = this.getBlockTypeMenuItems();
 
         if (blockElement) {
             // Add before
@@ -176,7 +183,7 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
                 disabled: this.fieldConfig.disallowAddRemove,
                 cls: 'pimcore_block_button_plus',
                 iconCls: 'pimcore_icon_plus_up',
-                menu: this.createBlockTypeMenu('before', blockElement)
+                handler: this.addBlock.bind(this, blockElement, 'before')
             });
 
             // Add after
@@ -184,7 +191,7 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
                 disabled: this.fieldConfig.disallowAddRemove,
                 cls: 'pimcore_block_button_plus',
                 iconCls: 'pimcore_icon_plus_down',
-                menu: this.createBlockTypeMenu('after', blockElement)
+                handler: this.addBlock.bind(this, blockElement, 'after')
             });
 
             // Delete
@@ -222,87 +229,15 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
                 disabled: this.fieldConfig.disallowAddRemove,
                 cls: 'pimcore_block_button_plus',
                 iconCls: 'pimcore_icon_plus',
-                menu: this.createBlockTypeMenu('after', null)
+                handler: this.addBlock.bind(this, blockElement, 'after')
             });
         }
 
         var toolbar = new Ext.Toolbar({
-            cls: 'extended-block-toolbar',
             items: items
         });
 
         return toolbar;
-    },
-
-    /**
-     * Creates a menu for selecting block type when adding.
-     *
-     * @param {string} position - 'before' or 'after'
-     * @param {Ext.Panel} blockElement - The reference block element
-     * @returns {Ext.menu.Menu} The block type menu
-     */
-    createBlockTypeMenu: function(position, blockElement) {
-        var _this = this;
-        var blockDefinitions = this.fieldConfig.blockDefinitions || {};
-        var menuItems = [];
-
-        for (var typeName in blockDefinitions) {
-            if (blockDefinitions.hasOwnProperty(typeName)) {
-                var blockDef = blockDefinitions[typeName];
-                menuItems.push({
-                    text: blockDef.name || typeName,
-                    iconCls: 'pimcore_icon_add',
-                    handler: function(type, pos, element) {
-                        return function() {
-                            _this.addBlock(element, pos, type);
-                        };
-                    }(typeName, position, blockElement)
-                });
-            }
-        }
-
-        // Default type if no definitions
-        if (menuItems.length === 0) {
-            menuItems.push({
-                text: t('default') || 'Default',
-                iconCls: 'pimcore_icon_add',
-                handler: function() {
-                    _this.addBlock(blockElement, position, 'default');
-                }
-            });
-        }
-
-        return new Ext.menu.Menu({ items: menuItems });
-    },
-
-    /**
-     * Gets menu items for block types.
-     *
-     * @returns {Array} Menu item configurations
-     */
-    getBlockTypeMenuItems: function() {
-        var _this = this;
-        var blockDefinitions = this.fieldConfig.blockDefinitions || {};
-        var menuItems = [];
-
-        for (var typeName in blockDefinitions) {
-            if (blockDefinitions.hasOwnProperty(typeName)) {
-                var blockDef = blockDefinitions[typeName];
-                menuItems.push({
-                    text: blockDef.name || typeName,
-                    value: typeName
-                });
-            }
-        }
-
-        if (menuItems.length === 0) {
-            menuItems.push({
-                text: t('default') || 'Default',
-                value: 'default'
-            });
-        }
-
-        return menuItems;
     },
 
     /**
@@ -323,13 +258,30 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
     },
 
     /**
+     * Closes any open editors (WYSIWYG, etc.)
+     */
+    closeOpenEditors: function() {
+        for (var i = 0; i < this.currentElements.length; i++) {
+            if (typeof this.currentElements[i] === 'object') {
+                for (var e = 0; e < this.currentElements[i]['fields'].length; e++) {
+                    if (typeof this.currentElements[i]['fields'][e]['close'] === 'function') {
+                        this.currentElements[i]['fields'][e].close();
+                    }
+                }
+            }
+        }
+    },
+
+    /**
      * Adds a new block element.
+     * Follows Pimcore Block pattern.
      *
      * @param {Ext.Panel} blockElement - Reference block element
      * @param {string} position - 'before' or 'after'
-     * @param {string} type - Block type name
      */
-    addBlock: function(blockElement, position, type) {
+    addBlock: function(blockElement, position) {
+        this.closeOpenEditors();
+
         // Check max items limit
         if (this.fieldConfig.maxItems) {
             var itemAmount = 0;
@@ -340,7 +292,7 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
             }
 
             if (itemAmount >= this.fieldConfig.maxItems) {
-                Ext.MessageBox.alert(t('error'), t('limit_reached') || 'Maximum number of items reached');
+                Ext.MessageBox.alert(t('error'), t('limit_reached'));
                 return;
             }
         }
@@ -354,7 +306,7 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
             index++;
         }
 
-        this.addBlockElement(index, {}, null, type || 'default');
+        this.addBlockElement(index, {});
     },
 
     /**
@@ -363,6 +315,8 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
      * @param {Ext.Panel} blockElement - The block element to remove
      */
     removeBlock: function(blockElement) {
+        this.closeOpenEditors();
+
         var key = blockElement.key;
         this.currentElements[key] = 'deleted';
 
@@ -384,6 +338,7 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
      * @param {Ext.Panel} blockElement - The block element to move
      */
     moveBlockUp: function(blockElement) {
+        this.closeOpenEditors();
         this.component.moveBefore(blockElement, blockElement.previousSibling());
         this.dirty = true;
     },
@@ -394,22 +349,23 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
      * @param {Ext.Panel} blockElement - The block element to move
      */
     moveBlockDown: function(blockElement) {
+        this.closeOpenEditors();
         this.component.moveAfter(blockElement, blockElement.nextSibling());
         this.dirty = true;
     },
 
     /**
      * Adds a block element to the container.
+     * Follows Pimcore Block pattern using getRecursiveLayout.
      *
      * @param {number} index - Position index
      * @param {Object} config - Configuration object with oIndex
      * @param {Object} blockData - Field data for the block
-     * @param {string} type - Block type name
      * @param {boolean} ignoreChange - Whether to ignore dirty state change
      */
-    addBlockElement: function(index, config, blockData, type, ignoreChange) {
-        var _this = this;
+    addBlockElement: function(index, config, blockData, ignoreChange) {
         var oIndex = config.oIndex;
+        this.closeOpenEditors();
 
         // Remove the initial toolbar if there are no elements
         if (this.currentElements.length < 1) {
@@ -418,34 +374,45 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
 
         this.dataFields = {};
         this.currentData = {};
-        this.currentType = type || 'default';
 
         if (blockData) {
             this.currentData = blockData;
         }
 
-        // Get block definition
-        var blockDef = this.fieldConfig.blockDefinitions 
-            ? this.fieldConfig.blockDefinitions[this.currentType] 
-            : null;
-        var blockTitle = blockDef ? (blockDef.name || this.currentType) : this.currentType;
+        // Build field items using Pimcore's getRecursiveLayout
+        // Parameters: layoutDef, noteditable, context, skipLayoutChildren, onlyLayoutChildren, dataProvider, disableLazyRendering
+        var fieldConfig = this.fieldConfig;
 
-        // Build field items
-        var fieldItems = this.buildFieldItems(blockDef);
+        var context = this.getContext();
+        context['subContainerType'] = 'extendedBlock';
+        context['subContainerKey'] = fieldConfig.name;
+        context['applyDefaults'] = true;
+
+        // Call getRecursiveLayout (from pimcore.object.helpers.edit mixin)
+        // - fieldConfig: layout definition with children
+        // - undefined: noteditable (use default)
+        // - context: context object with containerType, objectId, etc.
+        // - undefined: skipLayoutChildren (use default)
+        // - undefined: onlyLayoutChildren (use default)
+        // - undefined: dataProvider (will use 'this' as default)
+        // - true: disableLazyRendering (force immediate rendering)
+        var items = this.getRecursiveLayout(fieldConfig, undefined, context, undefined, undefined, undefined, true);
+
+        items = items.items;
 
         var blockElement = new Ext.Panel({
             pimcore_oIndex: oIndex,
-            pimcore_type: this.currentType,
             bodyStyle: 'padding: 10px;',
-            style: 'margin: 0 0 10px 0;',
+            style: 'margin: 10px 0 10px 0;' + (this.fieldConfig.styleElement || ''),
             manageHeight: false,
-            border: true,
-            title: blockTitle,
-            cls: 'extended-block-item',
-            collapsible: true,
-            collapsed: false,
-            animCollapse: false,
-            items: fieldItems,
+            border: false,
+            items: [
+                {
+                    xtype: 'panel',
+                    style: 'margin: 10px 0 10px 0;',
+                    items: items
+                }
+            ],
             disabled: this.fieldConfig.noteditable
         });
 
@@ -457,8 +424,7 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
 
         this.currentElements.push({
             container: blockElement,
-            fields: this.dataFields,
-            type: this.currentType
+            fields: this.dataFields
         });
 
         if (!ignoreChange) {
@@ -467,169 +433,70 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
 
         this.dataFields = {};
         this.currentData = {};
+
+        this.updateBlockIndices();
     },
 
     /**
-     * Builds field items based on block definition.
-     *
-     * @param {Object} blockDef - The block definition
-     * @returns {Array} Array of field components
+     * Updates block indices for all field contexts.
      */
-    buildFieldItems: function(blockDef) {
-        var items = [];
-        var fields = blockDef ? (blockDef.fields || []) : [];
+    updateBlockIndices: function() {
+        for (var itemIndex = 0; itemIndex < this.component.items.items.length; itemIndex++) {
+            var item = this.component.items.items[itemIndex];
 
-        for (var i = 0; i < fields.length; i++) {
-            var fieldDef = fields[i];
-            var fieldComponent = this.createFieldComponent(fieldDef);
-            if (fieldComponent) {
-                items.push(fieldComponent);
-                this.dataFields[fieldDef.name] = fieldComponent;
-            }
-        }
+            for (var j = 0; j < this.currentElements.length; j++) {
+                if (item !== this.currentElements[j].container) {
+                    continue;
+                }
 
-        return items;
-    },
-
-    /**
-     * Creates a field component based on field definition.
-     *
-     * @param {Object} fieldDef - The field definition
-     * @returns {Ext.Component} The field component
-     */
-    createFieldComponent: function(fieldDef) {
-        var value = this.currentData[fieldDef.name] || null;
-        var fieldLabel = fieldDef.title || fieldDef.name;
-        var tooltip = fieldDef.tooltip || '';
-
-        var baseConfig = {
-            fieldLabel: fieldLabel,
-            name: fieldDef.name,
-            anchor: '100%',
-            labelWidth: 150
-        };
-
-        if (tooltip) {
-            baseConfig.labelAttrTpl = 'data-qtip="' + Ext.util.Format.htmlEncode(tooltip) + '"';
-        }
-
-        switch (fieldDef.fieldtype) {
-            case 'input':
-                return new Ext.form.TextField(Ext.apply(baseConfig, {
-                    value: value
-                }));
-
-            case 'textarea':
-                return new Ext.form.TextArea(Ext.apply(baseConfig, {
-                    value: value,
-                    height: 100
-                }));
-
-            case 'wysiwyg':
-                return new Ext.form.HtmlEditor(Ext.apply(baseConfig, {
-                    value: value,
-                    height: 200
-                }));
-
-            case 'checkbox':
-                return new Ext.form.Checkbox(Ext.apply(baseConfig, {
-                    checked: value === true
-                }));
-
-            case 'numeric':
-                return new Ext.form.NumberField(Ext.apply(baseConfig, {
-                    value: value
-                }));
-
-            case 'date':
-                return new Ext.form.DateField(Ext.apply(baseConfig, {
-                    value: value ? new Date(value) : null,
-                    format: 'Y-m-d'
-                }));
-
-            case 'select':
-                return new Ext.form.ComboBox(Ext.apply(baseConfig, {
-                    value: value,
-                    store: fieldDef.options || [],
-                    editable: false,
-                    forceSelection: true
-                }));
-
-            case 'multiselect':
-                return new Ext.form.field.Tag(Ext.apply(baseConfig, {
-                    value: value,
-                    store: fieldDef.options || [],
-                    multiSelect: true
-                }));
-
-            case 'link':
-                return new Ext.form.TextField(Ext.apply(baseConfig, {
-                    value: value,
-                    vtype: 'url'
-                }));
-
-            case 'image':
-                return this.createImageField(fieldDef, value);
-
-            default:
-                return new Ext.form.TextField(Ext.apply(baseConfig, {
-                    value: value
-                }));
-        }
-    },
-
-    /**
-     * Creates an image field component.
-     *
-     * @param {Object} fieldDef - The field definition
-     * @param {*} value - The current value
-     * @returns {Ext.Panel} The image field panel
-     */
-    createImageField: function(fieldDef, value) {
-        var _this = this;
-        var fieldName = fieldDef.name;
-        var fieldLabel = fieldDef.title || fieldDef.name;
-
-        var imagePanel = new Ext.Panel({
-            layout: 'hbox',
-            border: false,
-            margin: '0 0 10px 0',
-            items: [
-                {
-                    xtype: 'label',
-                    text: fieldLabel + ':',
-                    width: 150
-                },
-                {
-                    xtype: 'textfield',
-                    name: fieldName,
-                    value: value,
-                    flex: 1
-                },
-                {
-                    xtype: 'button',
-                    text: t('select') || 'Select',
-                    iconCls: 'pimcore_icon_search',
-                    handler: function() {
-                        // Image selection would use Pimcore's asset selector
-                        pimcore.helpers.itemselector(
-                            false,
-                            function(items) {
-                                if (items.length > 0) {
-                                    var textField = imagePanel.down('textfield');
-                                    if (textField) {
-                                        textField.setValue(items[0].fullpath);
-                                    }
-                                }
-                            },
-                            { type: ['asset'], subtype: { asset: ['image'] } }
-                        );
+                var fields = this.currentElements[j].fields;
+                for (var fieldName in fields) {
+                    if (fields.hasOwnProperty(fieldName) && fields[fieldName].context) {
+                        fields[fieldName].context.index = itemIndex;
                     }
                 }
-            ]
-        });
+            }
+        }
+    },
 
-        return imagePanel;
+    /**
+     * Gets data for a field (required by getRecursiveLayout).
+     *
+     * @param {Object} fieldConfig - Field configuration
+     * @returns {*} The field data
+     */
+    getDataForField: function(fieldConfig) {
+        var name = fieldConfig.name;
+        return this.currentData[name];
+    },
+
+    /**
+     * Gets metadata for a field (required by getRecursiveLayout).
+     *
+     * @param {Object} fieldConfig - Field configuration
+     * @returns {null} Always returns null for ExtendedBlock
+     */
+    getMetaDataForField: function(fieldConfig) {
+        return null;
+    },
+
+    /**
+     * Adds a field to the dataFields collection (required by getRecursiveLayout).
+     *
+     * @param {Object} field - The field instance
+     * @param {string} name - The field name
+     */
+    addToDataFields: function(field, name) {
+        if (this.dataFields[name]) {
+            // This is especially for localized fields which get aggregated here into one field definition
+            // in the case that there are more than one localized fields in the class definition
+            // see also ClassDefinition::extractDataDefinitions();
+            if (typeof this.dataFields[name]['addReferencedField'] === 'function') {
+                this.dataFields[name].addReferencedField(field);
+            }
+        } else {
+            this.dataFields[name] = field;
+        }
     },
 
     /**
@@ -645,6 +512,7 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
 
     /**
      * Gets the current value for saving.
+     * Follows Pimcore Block pattern.
      *
      * @returns {Array} The block data array
      */
@@ -663,23 +531,17 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
                 for (var u = 0; u < elementFieldNames.length; u++) {
                     var elementFieldName = elementFieldNames[u];
                     try {
-                        var field = element.fields[elementFieldName];
-                        if (field && typeof field.getValue === 'function') {
-                            elementData[elementFieldName] = field.getValue();
-                        } else if (field && field.down && field.down('textfield')) {
-                            // Handle composite fields like image
-                            elementData[elementFieldName] = field.down('textfield').getValue();
-                        }
+                        // no check for dirty, ... always send all field to the server
+                        elementData[element.fields[elementFieldName].getName()] = element.fields[elementFieldName].getValue();
                     } catch (e) {
                         console.log(e);
-                        elementData[elementFieldName] = '';
+                        elementData[element.fields[elementFieldName].getName()] = '';
                     }
                 }
 
                 data.push({
                     data: elementData,
-                    oIndex: element.container.pimcore_oIndex,
-                    type: element.type || 'default'
+                    oIndex: element.container.pimcore_oIndex
                 });
             }
         }
@@ -759,3 +621,6 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
         return false;
     }
 });
+
+// Add helper methods for recursive layout rendering (like Pimcore Block)
+pimcore.object.tags.extendedBlock.addMethods(pimcore.object.helpers.edit);
