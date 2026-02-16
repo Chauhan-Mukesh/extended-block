@@ -15,25 +15,21 @@
  * @license    MIT License
  */
 
-import React from 'react'
-import { injectable } from 'inversify'
+import { type ReactElement } from 'react'
+import { injectable } from '@pimcore/studio-ui-bundle/app'
 import {
   DynamicTypeObjectDataAbstract,
   type AbstractObjectDataDefinition,
-  type EditMode,
-  type EditModalSettings,
-  type GetGridCellDefinitionProps
-} from '@pimcore/studio-ui-bundle/modules/element/dynamic-types/definitions/objects/data-related'
-import { ExtendedBlock } from '../../components/extended-block/extended-block'
-import { ExtendedBlockVersionView } from '../../components/extended-block/extended-block-version-view'
-import { ItemsCount } from '@pimcore/studio-ui-bundle/modules/element/dynamic-types/definitions/grid-cell-preview'
+  type GetGridCellDefinitionProps,
+  Block
+} from '@pimcore/studio-ui-bundle/modules/element'
 import { type FormItemProps } from 'antd'
 
 /**
  * Extended Block data type definition for Pimcore Studio UI.
  *
  * This dynamic type provides:
- * - Edit component for object editing
+ * - Edit component for object editing (reuses Block component)
  * - Grid cell preview showing item count
  * - Version view component for comparing versions
  * - Edit modal settings for grid inline editing
@@ -47,27 +43,16 @@ export class DynamicTypeExtendedBlock extends DynamicTypeObjectDataAbstract {
   readonly id: string = 'extendedBlock'
 
   /**
-   * Grid cell edit mode - uses modal for better UX
-   */
-  gridCellEditMode: EditMode = 'edit-modal'
-
-  /**
-   * Modal settings for grid cell editing
-   */
-  gridCellEditModalSettings: EditModalSettings = {
-    modalSize: 'XL',
-    formLayout: 'vertical'
-  }
-
-  /**
    * Returns the main editing component for ExtendedBlock.
+   * Reuses the Block component from Pimcore Studio UI since ExtendedBlock
+   * has the same UI behavior as Block (only storage differs).
    *
    * @param props - Component properties from the data object editor
-   * @returns The ExtendedBlock React component
+   * @returns The Block React component
    */
-  getObjectDataComponent (props: AbstractObjectDataDefinition): React.ReactElement<AbstractObjectDataDefinition> {
+  getObjectDataComponent (props: AbstractObjectDataDefinition): ReactElement<AbstractObjectDataDefinition> {
     return (
-      <ExtendedBlock { ...props } />
+      <Block { ...props } />
     )
   }
 
@@ -87,13 +72,17 @@ export class DynamicTypeExtendedBlock extends DynamicTypeObjectDataAbstract {
 
   /**
    * Returns the version view component for comparing object versions.
+   * Uses the same Block component with noteditable set to true.
    *
    * @param props - Component properties
-   * @returns The version view React component
+   * @returns The Block React component in read-only mode
    */
-  getVersionObjectDataComponent (props: AbstractObjectDataDefinition): React.ReactElement<AbstractObjectDataDefinition> {
+  getVersionObjectDataComponent (props: AbstractObjectDataDefinition): ReactElement<AbstractObjectDataDefinition> {
     return (
-      <ExtendedBlockVersionView { ...props } />
+      <Block
+        { ...props }
+        noteditable
+      />
     )
   }
 
@@ -101,13 +90,15 @@ export class DynamicTypeExtendedBlock extends DynamicTypeObjectDataAbstract {
    * Returns the grid cell preview component showing the item count.
    *
    * @param props - Grid cell properties
-   * @returns The preview React component
+   * @returns The preview React element
    */
-  getGridCellPreviewComponent (props: GetGridCellDefinitionProps): React.ReactElement {
-    const value: [] | null = props.cellProps.getValue()
+  getGridCellPreviewComponent (props: GetGridCellDefinitionProps): ReactElement {
+    const rawValue = props.cellProps.getValue()
+    const value = Array.isArray(rawValue) ? rawValue : null
+    const count = value?.length ?? 0
 
     return (
-      <ItemsCount count={ value?.length ?? 0 } />
+      <span>{ count } item{ count !== 1 ? 's' : '' }</span>
     )
   }
 }
