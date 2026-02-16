@@ -74,3 +74,8 @@ coverage/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Node.js dependencies and build outputs (Pimcore Studio UI)
+assets/node_modules/
+public/studio-ui-build/
+assets/package-lock.json
