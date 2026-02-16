@@ -84,19 +84,81 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
     /**
      * Returns the layout component for grid column.
      *
+     * Implements grid column configuration following the structuredTable pattern.
+     * Renders a summary table showing block item count and preview of first items.
+     *
      * @param {Object} field - The field configuration
      * @returns {Object} Column configuration
      */
     getGridColumnConfig: function(field) {
         return {
             text: t(field.label),
-            width: 150,
+            width: 200,
             sortable: false,
             dataIndex: field.key,
-            renderer: function(key, value, metaData, record) {
+            renderer: function(key, field, value, metaData, record) {
                 this.applyPermissionStyle(key, value, metaData, record);
-                return t('not_supported');
-            }.bind(this, field.key)
+
+                // Handle inheritance styling
+                if (record.data.inheritedFields && 
+                    record.data.inheritedFields[key] && 
+                    record.data.inheritedFields[key].inherited === true) {
+                    metaData.tdCls += ' grid_value_inherited';
+                }
+
+                // Handle empty/null values
+                if (!value || typeof value !== 'object') {
+                    return '<span style="color: #999;">0 items</span>';
+                }
+
+                // Get count and items from structured data
+                var count = value.count || 0;
+                var items = value.items || [];
+
+                if (count === 0) {
+                    return '<span style="color: #999;">0 items</span>';
+                }
+
+                // Build summary display
+                var html = '<div class="extended-block-grid-cell">';
+                html += '<div style="font-weight: bold; margin-bottom: 3px;">';
+                html += count + ' item' + (count !== 1 ? 's' : '');
+                html += '</div>';
+
+                // Show preview of first items
+                if (items.length > 0) {
+                    html += '<table cellpadding="1" cellspacing="0" ' +
+                            'style="font-size: 11px; border-collapse: collapse;">';
+                    
+                    for (var i = 0; i < items.length; i++) {
+                        var item = items[i];
+                        html += '<tr>';
+                        html += '<td style="padding: 1px 4px 1px 0; color: #666;">';
+                        html += '#' + (item.index + 1);
+                        html += '</td>';
+                        html += '<td style="padding: 1px 0; max-width: 150px; ' +
+                                'overflow: hidden; text-overflow: ellipsis; ' +
+                                'white-space: nowrap;">';
+                        html += Ext.util.Format.htmlEncode(item.preview || '');
+                        html += '</td>';
+                        html += '</tr>';
+                    }
+                    
+                    // Show "more" indicator if there are more items
+                    if (count > items.length) {
+                        html += '<tr>';
+                        html += '<td colspan="2" style="color: #999; font-style: italic;">';
+                        html += '... and ' + (count - items.length) + ' more';
+                        html += '</td>';
+                        html += '</tr>';
+                    }
+                    
+                    html += '</table>';
+                }
+
+                html += '</div>';
+                return html;
+            }.bind(this, field.key, field)
         };
     },
 

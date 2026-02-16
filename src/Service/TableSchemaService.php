@@ -13,9 +13,7 @@ declare(strict_types=1);
 namespace ExtendedBlockBundle\Service;
 
 use Doctrine\DBAL\Connection;
-use Exception;
 use ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock;
-use InvalidArgumentException;
 use Pimcore\Db;
 use Pimcore\Logger;
 use Pimcore\Model\DataObject\ClassDefinition;
@@ -54,7 +52,7 @@ class TableSchemaService
      *
      * @param string $tablePrefix The table prefix (from configuration)
      *
-     * @throws InvalidArgumentException If table prefix is invalid
+     * @throws \InvalidArgumentException If table prefix is invalid
      */
     public function __construct(string $tablePrefix = 'object_eb_')
     {
@@ -83,7 +81,7 @@ class TableSchemaService
 
         // Handle localized table if needed
         if ($fieldDefinition->isAllowLocalizedFields() && $fieldDefinition->hasLocalizedFields()) {
-            $localizedTableName = $tableName . '_localized';
+            $localizedTableName = $tableName.'_localized';
 
             if ($this->tableExists($localizedTableName)) {
                 $this->updateLocalizedTable($class, $fieldDefinition, $localizedTableName);
@@ -101,13 +99,13 @@ class TableSchemaService
      * @param string $classId   The class ID
      * @param string $fieldName The field name
      *
-     * @throws InvalidArgumentException If classId or fieldName is invalid
+     * @throws \InvalidArgumentException If classId or fieldName is invalid
      */
     public function dropTables(string $classId, string $fieldName): void
     {
         // getTableName() validates classId and fieldName
         $tableName = $this->getTableName($classId, $fieldName);
-        $localizedTableName = $tableName . '_localized';
+        $localizedTableName = $tableName.'_localized';
 
         // Validate the localized table name (may exceed length with _localized suffix)
         IdentifierValidator::validateTableName($localizedTableName);
@@ -134,9 +132,9 @@ class TableSchemaService
      * @param string $classId   The class ID
      * @param string $fieldName The field name
      *
-     * @throws InvalidArgumentException If classId or fieldName is invalid
-     *
      * @return string The validated table name
+     *
+     * @throws \InvalidArgumentException If classId or fieldName is invalid
      */
     public function getTableName(string $classId, string $fieldName): string
     {
@@ -144,7 +142,7 @@ class TableSchemaService
         IdentifierValidator::validateClassId($classId);
         IdentifierValidator::validateFieldName($fieldName);
 
-        $tableName = $this->tablePrefix . $classId . '_' . $fieldName;
+        $tableName = $this->tablePrefix.$classId.'_'.$fieldName;
 
         // Validate the full table name as well
         IdentifierValidator::validateTableName($tableName);
@@ -162,7 +160,7 @@ class TableSchemaService
         $tables = $this->db->fetchFirstColumn(
             'SELECT table_name FROM information_schema.tables 
              WHERE table_schema = DATABASE() AND table_name LIKE ?',
-            [$this->tablePrefix . '%']
+            [$this->tablePrefix.'%']
         );
 
         return $tables;
@@ -214,13 +212,13 @@ class TableSchemaService
 
         // Use quoteIdentifier to safely escape the table name
         $quotedTable = $this->db->quoteIdentifier($tableName);
-        $sql = "CREATE TABLE {$quotedTable} (\n" . implode(",\n", $columns) . "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         try {
             $this->db->executeStatement($sql);
             Logger::info("ExtendedBlock: Created table {$tableName}");
-        } catch (Exception $e) {
-            Logger::error("ExtendedBlock: Failed to create table {$tableName}: " . $e->getMessage());
+        } catch (\Exception $e) {
+            Logger::error("ExtendedBlock: Failed to create table {$tableName}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -249,8 +247,8 @@ class TableSchemaService
                 try {
                     $this->db->executeStatement($sql);
                     Logger::info("ExtendedBlock: Added column {$columnName} to {$tableName}");
-                } catch (Exception $e) {
-                    Logger::error("ExtendedBlock: Failed to add column {$columnName}: " . $e->getMessage());
+                } catch (\Exception $e) {
+                    Logger::error("ExtendedBlock: Failed to add column {$columnName}: ".$e->getMessage());
                 }
             }
         }
@@ -274,13 +272,13 @@ class TableSchemaService
         $columns = $this->buildLocalizedTableColumns($fieldDefinition);
 
         $quotedTable = $this->db->quoteIdentifier($localizedTableName);
-        $sql = "CREATE TABLE {$quotedTable} (\n" . implode(",\n", $columns) . "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         try {
             $this->db->executeStatement($sql);
             Logger::info("ExtendedBlock: Created localized table {$localizedTableName}");
-        } catch (Exception $e) {
-            Logger::error('ExtendedBlock: Failed to create localized table: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Logger::error('ExtendedBlock: Failed to create localized table: '.$e->getMessage());
             throw $e;
         }
     }
@@ -311,8 +309,8 @@ class TableSchemaService
                 try {
                     $this->db->executeStatement($sql);
                     Logger::info("ExtendedBlock: Added column {$columnName} to {$localizedTableName}");
-                } catch (Exception $e) {
-                    Logger::error('ExtendedBlock: Failed to add column: ' . $e->getMessage());
+                } catch (\Exception $e) {
+                    Logger::error('ExtendedBlock: Failed to add column: '.$e->getMessage());
                 }
             }
         }
@@ -363,9 +361,9 @@ class TableSchemaService
      *
      * @param ExtendedBlock $fieldDefinition The field definition
      *
-     * @throws InvalidArgumentException If any field name is invalid
-     *
      * @return array<string> Column definitions for CREATE TABLE
+     *
+     * @throws \InvalidArgumentException If any field name is invalid
      */
     protected function buildMainTableColumns(ExtendedBlock $fieldDefinition): array
     {
@@ -414,9 +412,9 @@ class TableSchemaService
      *
      * @param ExtendedBlock $fieldDefinition The field definition
      *
-     * @throws InvalidArgumentException If any field name is invalid
-     *
      * @return array<string> Column definitions for CREATE TABLE
+     *
+     * @throws \InvalidArgumentException If any field name is invalid
      */
     protected function buildLocalizedTableColumns(ExtendedBlock $fieldDefinition): array
     {
@@ -444,9 +442,9 @@ class TableSchemaService
      *
      * @param ExtendedBlock $fieldDefinition The field definition
      *
-     * @throws InvalidArgumentException If any field name is invalid
-     *
      * @return array<string, string> Column names and types
+     *
+     * @throws \InvalidArgumentException If any field name is invalid
      */
     protected function getRequiredColumns(ExtendedBlock $fieldDefinition): array
     {
@@ -481,9 +479,9 @@ class TableSchemaService
      *
      * @param ExtendedBlock $fieldDefinition The field definition
      *
-     * @throws InvalidArgumentException If any field name is invalid
-     *
      * @return array<string, string> Column names and types
+     *
+     * @throws \InvalidArgumentException If any field name is invalid
      */
     protected function getLocalizedRequiredColumns(ExtendedBlock $fieldDefinition): array
     {
