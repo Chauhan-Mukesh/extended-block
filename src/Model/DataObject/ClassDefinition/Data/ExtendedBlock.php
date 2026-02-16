@@ -61,6 +61,26 @@ use Pimcore\Model\DataObject\Objectbrick\Data\AbstractData as ObjectbrickAbstrac
 class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterface, Data\LazyLoadingSupportInterface, Data\LayoutDefinitionEnrichmentInterface, Data\PreGetDataInterface, Data\VarExporterInterface
 {
     /**
+     * Maximum number of items to show in grid preview.
+     */
+    private const GRID_MAX_PREVIEW_ITEMS = 5;
+
+    /**
+     * Maximum number of fields to show in grid preview.
+     */
+    private const GRID_MAX_PREVIEW_FIELDS = 3;
+
+    /**
+     * Maximum length for truncated string values in grid.
+     */
+    private const GRID_MAX_STRING_LENGTH = 50;
+
+    /**
+     * Length of truncated string prefix (GRID_MAX_STRING_LENGTH - 3 for "...").
+     */
+    private const GRID_TRUNCATE_LENGTH = 47;
+
+    /**
      * Data type identifier for Pimcore.
      */
     public string $fieldtype = 'extendedBlock';
@@ -772,8 +792,8 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         $fieldNames = $this->getGridDisplayableFieldNames();
         $result['fields'] = $fieldNames;
 
-        // Generate preview for first 5 items to keep grid lightweight
-        $maxItems = min(5, count($items));
+        // Generate preview for limited items to keep grid lightweight
+        $maxItems = min(self::GRID_MAX_PREVIEW_ITEMS, count($items));
         for ($i = 0; $i < $maxItems; ++$i) {
             $item = $items[$i];
             $preview = $this->buildItemGridPreview($item, $fieldNames);
@@ -816,12 +836,11 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         ];
 
         $fieldNames = [];
-        $maxFields = 3; // Limit fields shown in grid to keep it readable
 
         foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
             if (in_array($fieldDef->getFieldtype(), $displayableTypes, true)) {
                 $fieldNames[] = $fieldName;
-                if (count($fieldNames) >= $maxFields) {
+                if (count($fieldNames) >= self::GRID_MAX_PREVIEW_FIELDS) {
                     break;
                 }
             }
@@ -887,8 +906,8 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         $stringValue = (string) $value;
 
         // Truncate long strings
-        if (strlen($stringValue) > 50) {
-            return substr($stringValue, 0, 47).'...';
+        if (strlen($stringValue) > self::GRID_MAX_STRING_LENGTH) {
+            return substr($stringValue, 0, self::GRID_TRUNCATE_LENGTH).'...';
         }
 
         // Strip HTML tags for WYSIWYG content
