@@ -38,12 +38,13 @@ A Pimcore bundle that extends the block data type by storing data in separate da
 - **Safe Schema Updates**: New fields can be added without data loss; removed fields preserve existing data
 - **Lazy Loading**: Optional lazy loading for improved performance with large datasets
 - **Dark Mode Support**: CSS supports dark mode when the browser prefers dark color scheme
+- **Pimcore Studio UI Support**: Full support for Pimcore's new React-based Studio UI (Pimcore 12+)
 
 ## 📦 Requirements
 
 - PHP 8.0 or higher
-- Pimcore 10.0 or higher (supports Pimcore 10.x and 11.x)
-- Symfony 5.4 or higher (5.x for Pimcore 10, 6.x for Pimcore 11)
+- Pimcore 10.0 or higher (supports Pimcore 10.x, 11.x, and 12.x)
+- Symfony 5.4 or higher (5.x for Pimcore 10, 6.x for Pimcore 11, 7.x for Pimcore 12)
 
 ## 🚀 Installation
 
@@ -101,6 +102,43 @@ bin/console pimcore:bundle:install ExtendedBlockBundle
 
 ```bash
 bin/console assets:install public --symlink
+```
+
+### Step 5: Build Pimcore Studio UI Assets (Optional - for Pimcore 12+)
+
+If you're using Pimcore 12 or newer with the Studio UI Bundle, you need to build the frontend assets:
+
+```bash
+cd vendor/chauhan-mukesh/extended-block-bundle/assets
+npm install
+npm run build
+```
+
+> **Note:** This step is only required if you're using Pimcore Studio UI. The classic admin UI (Pimcore 10/11) works without this step.
+
+## 🖥️ Pimcore Studio UI Support (Pimcore 12+)
+
+ExtendedBlock provides full support for Pimcore's new React-based Studio UI. The bundle includes:
+
+- **Dynamic Data Type**: ExtendedBlock is registered as a dynamic data type in Studio UI
+- **Edit Component**: Full editing capabilities with add/remove/reorder items
+- **Grid Cell Preview**: Shows item count in grid views
+- **Version View**: Support for comparing object versions
+
+### UI Architecture
+
+The Studio UI implementation uses:
+- **React**: TypeScript components with Ant Design
+- **Module Federation**: Integrates with Pimcore's plugin system
+- **Dynamic Types**: Extends `DynamicTypeObjectDataAbstract` for data type handling
+
+### Development Mode
+
+For development with hot reloading:
+
+```bash
+cd vendor/chauhan-mukesh/extended-block-bundle/assets
+npm run dev-server
 ```
 
 ## ⚙️ Configuration

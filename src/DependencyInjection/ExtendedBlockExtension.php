@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace ExtendedBlockBundle\DependencyInjection;
 
 use ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock;
+use Pimcore\Bundle\StudioUiBundle\PimcoreStudioUiBundle;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -59,6 +60,11 @@ class ExtendedBlockExtension extends Extension implements PrependExtensionInterf
 
         // Load all service configuration files
         $loader->load('services.yaml');
+
+        // Load Pimcore Studio UI services if the bundle is installed
+        if ($this->isStudioUiBundleAvailable()) {
+            $loader->load('services_studio_ui.yaml');
+        }
     }
 
     /**
@@ -103,5 +109,15 @@ class ExtendedBlockExtension extends Extension implements PrependExtensionInterf
                 ],
             ],
         ]);
+    }
+
+    /**
+     * Checks if Pimcore Studio UI Bundle is available.
+     *
+     * @return bool True if Studio UI Bundle is installed
+     */
+    private function isStudioUiBundleAvailable(): bool
+    {
+        return class_exists(PimcoreStudioUiBundle::class);
     }
 }
