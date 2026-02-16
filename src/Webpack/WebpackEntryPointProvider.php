@@ -3,12 +3,11 @@
 declare(strict_types=1);
 
 /**
- * Extended Block Bundle - Webpack Entry Point Provider
+ * Extended Block Bundle - Webpack Entry Point Provider.
  *
  * This class provides Pimcore Studio UI with the location of the
  * bundled JavaScript assets for the ExtendedBlock plugin.
  *
- * @package    ExtendedBlockBundle
  * @author     Chauhan Mukesh
  * @copyright  Copyright (c) 2026 Chauhan Mukesh
  * @license    MIT License
