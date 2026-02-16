@@ -12,19 +12,28 @@
 
 import { type AbstractModule, container } from '@pimcore/studio-ui-bundle'
 import { serviceIds } from '@pimcore/studio-ui-bundle/app'
-import { type DynamicTypeObjectDataRegistry } from '@pimcore/studio-ui-bundle/modules/element'
+import {
+  type DynamicTypeObjectDataRegistry,
+  type DynamicTypeObjectDataAbstract
+} from '@pimcore/studio-ui-bundle/modules/element'
 
+/**
+ * ExtendedBlock Module for Pimcore Studio UI.
+ *
+ * Registers the ExtendedBlock dynamic type with the object data registry
+ * so it can be used in data object editing.
+ */
 export const ExtendedBlockModule: AbstractModule = {
-  onInit: (): void => {
+  onInit (): void {
     // Get the object data registry from the DI container
     const objectDataRegistry = container.get<DynamicTypeObjectDataRegistry>(
       serviceIds['DynamicTypes/ObjectDataRegistry']
     )
 
-    // Register the ExtendedBlock dynamic type
-    // The type was bound in onInit of the plugin
-    objectDataRegistry.registerDynamicType(
-      container.get('DynamicTypes/ObjectData/ExtendedBlock')
+    // Get and register the ExtendedBlock dynamic type
+    const extendedBlockType = container.get<DynamicTypeObjectDataAbstract>(
+      'DynamicTypes/ObjectData/ExtendedBlock'
     )
+    objectDataRegistry.registerDynamicType(extendedBlockType)
   }
 }

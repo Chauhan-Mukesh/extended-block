@@ -2,6 +2,7 @@
   "name": "extended-block-bundle",
   "version": "1.0.0",
   "description": "ExtendedBlock Pimcore Studio UI Plugin",
+  "type": "module",
   "scripts": {
     "dev": "NODE_ENV=development rsbuild build",
     "dev-server": "NODE_ENV=dev-server rsbuild dev",
@@ -36,7 +37,6 @@
   "dependencies": {
     "@pimcore/studio-ui-bundle": ">=1.0.0-canary.20260211-094937-9b9e161",
     "react": "18.3.x",
-    "react-dom": "18.3.x",
-    "uuid": "^10.0.0"
+    "react-dom": "18.3.x"
   }
 }

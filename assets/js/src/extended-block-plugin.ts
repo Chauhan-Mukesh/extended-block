@@ -15,15 +15,20 @@ import { type IAbstractPlugin } from '@pimcore/studio-ui-bundle'
 import { DynamicTypeExtendedBlock } from './dynamic-types/definitions/dynamic-type-extended-block'
 import { ExtendedBlockModule } from './modules/extended-block-module'
 
+/**
+ * ExtendedBlock Plugin for Pimcore Studio UI.
+ *
+ * Registers the ExtendedBlock dynamic type with the container and module system.
+ */
 export const ExtendedBlockPlugin: IAbstractPlugin = {
   name: 'ExtendedBlockPlugin',
 
-  onInit ({ container }) {
+  onInit ({ container }): void {
     // Register the ExtendedBlock dynamic type in the DI container
     container.bind('DynamicTypes/ObjectData/ExtendedBlock').to(DynamicTypeExtendedBlock)
   },
 
-  onStartup ({ moduleSystem }) {
+  onStartup ({ moduleSystem }): void {
     // Register the module that extends the dynamic type registry
     moduleSystem.registerModule(ExtendedBlockModule)
   }
