@@ -54,7 +54,7 @@ class ExtendedBlockExtension extends Extension implements PrependExtensionInterf
         // Load service definitions from YAML configuration
         $loader = new YamlFileLoader(
             $container,
-            new FileLocator(__DIR__ . '/../Resources/config')
+            new FileLocator(__DIR__.'/../Resources/config')
         );
 
         // Load all service configuration files

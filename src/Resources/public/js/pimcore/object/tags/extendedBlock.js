@@ -82,7 +82,16 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
     },
 
     /**
+     * Grid column width for extended block cells.
+     * @constant {number}
+     */
+    GRID_COLUMN_WIDTH: 200,
+
+    /**
      * Returns the layout component for grid column.
+     *
+     * Implements grid column configuration following the structuredTable pattern.
+     * Renders a summary table showing block item count and preview of first items.
      *
      * @param {Object} field - The field configuration
      * @returns {Object} Column configuration
@@ -90,14 +99,159 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
     getGridColumnConfig: function(field) {
         return {
             text: t(field.label),
-            width: 150,
+            width: this.GRID_COLUMN_WIDTH,
             sortable: false,
             dataIndex: field.key,
-            renderer: function(key, value, metaData, record) {
-                this.applyPermissionStyle(key, value, metaData, record);
-                return t('not_supported');
-            }.bind(this, field.key)
+            renderer: this.createGridRenderer(field)
         };
+    },
+
+    /**
+     * Creates the grid cell renderer function.
+     *
+     * @param {Object} field - The field configuration
+     * @returns {Function} The renderer function
+     */
+    createGridRenderer: function(field) {
+        return function(key, fieldConfig, value, metaData, record) {
+            this.applyPermissionStyle(key, value, metaData, record);
+            this.applyInheritanceStyle(key, metaData, record);
+
+            if (!this.isValidGridValue(value)) {
+                return this.renderEmptyState();
+            }
+
+            var count = value.count || 0;
+            var items = value.items || [];
+
+            if (count === 0) {
+                return this.renderEmptyState();
+            }
+
+            return this.renderGridContent(count, items);
+        }.bind(this, field.key, field);
+    },
+
+    /**
+     * Applies inheritance styling to the grid cell.
+     *
+     * @param {string} key - The field key
+     * @param {Object} metaData - The cell metadata
+     * @param {Object} record - The grid record
+     */
+    applyInheritanceStyle: function(key, metaData, record) {
+        var inheritedFields = record.data.inheritedFields;
+        if (inheritedFields && inheritedFields[key] && inheritedFields[key].inherited === true) {
+            metaData.tdCls += ' grid_value_inherited';
+        }
+    },
+
+    /**
+     * Checks if the value is valid for grid display.
+     *
+     * @param {*} value - The value to check
+     * @returns {boolean} True if valid
+     */
+    isValidGridValue: function(value) {
+        return value && typeof value === 'object';
+    },
+
+    /**
+     * Renders the empty state HTML.
+     *
+     * @returns {string} Empty state HTML
+     */
+    renderEmptyState: function() {
+        return '<span style="color: #999;">0 items</span>';
+    },
+
+    /**
+     * Renders the grid content with item count and previews.
+     *
+     * @param {number} count - Total item count
+     * @param {Array} items - Array of item previews
+     * @returns {string} The rendered HTML
+     */
+    renderGridContent: function(count, items) {
+        var html = '<div class="extended-block-grid-cell">';
+        html += this.renderItemCount(count);
+        html += this.renderItemPreviewTable(count, items);
+        html += '</div>';
+        return html;
+    },
+
+    /**
+     * Renders the item count header.
+     *
+     * @param {number} count - Total item count
+     * @returns {string} The count HTML
+     */
+    renderItemCount: function(count) {
+        var html = '<div style="font-weight: bold; margin-bottom: 3px;">';
+        html += count + ' item' + (count !== 1 ? 's' : '');
+        html += '</div>';
+        return html;
+    },
+
+    /**
+     * Renders the item preview table.
+     *
+     * @param {number} count - Total item count
+     * @param {Array} items - Array of item previews
+     * @returns {string} The table HTML
+     */
+    renderItemPreviewTable: function(count, items) {
+        if (items.length === 0) {
+            return '';
+        }
+
+        var html = '<table cellpadding="1" cellspacing="0" ' +
+                   'style="font-size: 11px; border-collapse: collapse;">';
+
+        for (var i = 0; i < items.length; i++) {
+            html += this.renderItemPreviewRow(items[i]);
+        }
+
+        if (count > items.length) {
+            html += this.renderMoreItemsRow(count - items.length);
+        }
+
+        html += '</table>';
+        return html;
+    },
+
+    /**
+     * Renders a single item preview row.
+     *
+     * @param {Object} item - The item to render
+     * @returns {string} The row HTML
+     */
+    renderItemPreviewRow: function(item) {
+        var html = '<tr>';
+        html += '<td style="padding: 1px 4px 1px 0; color: #666;">';
+        html += '#' + (item.index + 1);
+        html += '</td>';
+        html += '<td style="padding: 1px 0; max-width: 150px; ' +
+                'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">';
+        html += Ext.util.Format.htmlEncode(item.preview || '');
+        html += '</td>';
+        html += '</tr>';
+        return html;
+    },
+
+    /**
+     * Renders the "more items" indicator row.
+     *
+     * @param {number} remainingCount - Number of remaining items
+     * @returns {string} The row HTML
+     */
+    renderMoreItemsRow: function(remainingCount) {
+        var html = '<tr>';
+        html += '<td colspan="2" style="color: #999; font-style: italic;">';
+        html += '... and ' + remainingCount + ' more';
+        html += '</td>';
+        html += '</tr>';
+        return html;
     },
 
     /**

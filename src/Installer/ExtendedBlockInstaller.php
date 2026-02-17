@@ -13,7 +13,6 @@ declare(strict_types=1);
 namespace ExtendedBlockBundle\Installer;
 
 use Doctrine\DBAL\Connection;
-use Exception;
 use Pimcore\Extension\Bundle\Installer\AbstractInstaller;
 
 /**
@@ -93,8 +92,8 @@ class ExtendedBlockInstaller extends AbstractInstaller
             );
 
             $this->output->writeln('Extended Block Bundle installed successfully!');
-        } catch (Exception $e) {
-            $this->output->writeln('Error installing bundle: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            $this->output->writeln('Error installing bundle: '.$e->getMessage());
             throw $e;
         }
     }
@@ -133,8 +132,8 @@ class ExtendedBlockInstaller extends AbstractInstaller
             );
 
             $this->output->writeln('Extended Block Bundle updated successfully!');
-        } catch (Exception $e) {
-            $this->output->writeln('Error updating bundle: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            $this->output->writeln('Error updating bundle: '.$e->getMessage());
             throw $e;
         }
     }
@@ -163,8 +162,8 @@ class ExtendedBlockInstaller extends AbstractInstaller
             $this->db->executeStatement("DROP TABLE IF EXISTS {$quotedTable}");
 
             $this->output->writeln('Extended Block Bundle uninstalled successfully!');
-        } catch (Exception $e) {
-            $this->output->writeln('Error uninstalling bundle: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            $this->output->writeln('Error uninstalling bundle: '.$e->getMessage());
             throw $e;
         }
     }
@@ -202,7 +201,7 @@ class ExtendedBlockInstaller extends AbstractInstaller
             // Check if version exists and is not empty
             // fetchOne returns false when no row found, or the value when found
             return !\in_array($version, [false, null, ''], true);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return false;
         }
     }
@@ -280,7 +279,7 @@ class ExtendedBlockInstaller extends AbstractInstaller
             );
 
             return $version ?: '0.0.0';
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return '0.0.0';
         }
     }

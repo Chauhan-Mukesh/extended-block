@@ -12,11 +12,9 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data;
 
-use Exception;
 use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockContainer;
 use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockItem;
 use ExtendedBlockBundle\Service\IdentifierValidator;
-use InvalidArgumentException;
 use Pimcore\Db;
 use Pimcore\Logger;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
@@ -62,6 +60,26 @@ use Pimcore\Model\DataObject\Objectbrick\Data\AbstractData as ObjectbrickAbstrac
  */
 class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterface, Data\LazyLoadingSupportInterface, Data\LayoutDefinitionEnrichmentInterface, Data\PreGetDataInterface, Data\VarExporterInterface
 {
+    /**
+     * Maximum number of items to show in grid preview.
+     */
+    private const GRID_MAX_PREVIEW_ITEMS = 5;
+
+    /**
+     * Maximum number of fields to show in grid preview.
+     */
+    private const GRID_MAX_PREVIEW_FIELDS = 3;
+
+    /**
+     * Maximum length for truncated string values in grid.
+     */
+    private const GRID_MAX_STRING_LENGTH = 50;
+
+    /**
+     * Length of truncated string prefix (GRID_MAX_STRING_LENGTH - 3 for "...").
+     */
+    private const GRID_TRUNCATE_LENGTH = 47;
+
     /**
      * Data type identifier for Pimcore.
      */
@@ -236,7 +254,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      */
     public function getPhpdocInputType(): ?string
     {
-        return '\\' . ExtendedBlockContainer::class . '|null';
+        return '\\'.ExtendedBlockContainer::class.'|null';
     }
 
     /**
@@ -246,7 +264,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      */
     public function getPhpdocReturnType(): ?string
     {
-        return '\\' . ExtendedBlockContainer::class . '|null';
+        return '\\'.ExtendedBlockContainer::class.'|null';
     }
 
     /**
@@ -399,8 +417,8 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                     $container->addItem($item);
                 }
             }
-        } catch (Exception $e) {
-            Logger::error('ExtendedBlock: Error loading block data: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Logger::error('ExtendedBlock: Error loading block data: '.$e->getMessage());
         }
 
         return $container;
@@ -432,7 +450,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      * - Removing deleted items
      *
      * @param Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object The parent object being saved
-     * @param array<string, mixed>                                                 $params Additional parameters
+     * @param array<string, mixed>                                                $params Additional parameters
      */
     public function save(Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object, array $params = []): void
     {
@@ -481,9 +499,9 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             }
 
             $db->commit();
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $db->rollBack();
-            Logger::error('ExtendedBlock: Error saving block data: ' . $e->getMessage());
+            Logger::error('ExtendedBlock: Error saving block data: '.$e->getMessage());
             throw $e;
         }
     }
@@ -495,7 +513,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      * method that Pimcore calls to load data stored in custom tables.
      *
      * @param Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object The object being loaded
-     * @param array<string, mixed>                                                 $params Additional parameters
+     * @param array<string, mixed>                                                $params Additional parameters
      *
      * @return ExtendedBlockContainer|null The loaded block container or null
      */
@@ -533,7 +551,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         if ($this->getLazyLoading() && !$container->isLazyKeyLoaded($this->getName())) {
             $data = $this->load($container);
 
-            $setter = 'set' . ucfirst($this->getName());
+            $setter = 'set'.ucfirst($this->getName());
             if (method_exists($container, $setter)) {
                 $container->$setter($data);
             }
@@ -549,7 +567,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      * Called when the parent object is deleted.
      *
      * @param Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object The object being deleted
-     * @param array<string, mixed>                                                 $params Additional parameters
+     * @param array<string, mixed>                                                $params Additional parameters
      */
     public function delete(Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object, array $params = []): void
     {
@@ -609,8 +627,8 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                 "DELETE FROM {$quotedTable} WHERE o_id = ? AND fieldname = ?",
                 [$object->getId(), $this->getName()]
             );
-        } catch (Exception $e) {
-            Logger::error('ExtendedBlock: Error deleting block data: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Logger::error('ExtendedBlock: Error deleting block data: '.$e->getMessage());
         }
     }
 
@@ -619,16 +637,16 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      *
      * @param string $classId The class ID
      *
-     * @throws InvalidArgumentException If classId is invalid
-     *
      * @return string The validated table name
+     *
+     * @throws \InvalidArgumentException If classId is invalid
      */
     public function getTableName(string $classId): string
     {
         // Validate classId before constructing the table name
         IdentifierValidator::validateClassId($classId);
 
-        $tableName = $this->tablePrefix . $classId . '_' . $this->getName();
+        $tableName = $this->tablePrefix.$classId.'_'.$this->getName();
 
         // Validate the full table name as well
         IdentifierValidator::validateTableName($tableName);
@@ -641,13 +659,13 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      *
      * @param string $classId The class ID
      *
-     * @throws InvalidArgumentException If classId is invalid
-     *
      * @return string The validated localized table name
+     *
+     * @throws \InvalidArgumentException If classId is invalid
      */
     public function getLocalizedTableName(string $classId): string
     {
-        $tableName = $this->getTableName($classId) . '_localized';
+        $tableName = $this->getTableName($classId).'_localized';
 
         // Validate the full localized table name
         IdentifierValidator::validateTableName($tableName);
@@ -666,45 +684,45 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      * - No Objectbricks inside ExtendedBlock
      * - No LocalizedFields inside ExtendedBlock
      *
-     * @throws Exception If validation fails
+     * @throws \Exception If validation fails
      */
     public function validate(): void
     {
         // Check for nested ExtendedBlock in LocalizedFields
         if ($this->disallowAddingInLocalizedField) {
-            throw new Exception('ExtendedBlock with localized fields cannot be added inside a LocalizedFields container. This would create an infinite recursion. Please restructure your class definition.');
+            throw new \Exception('ExtendedBlock with localized fields cannot be added inside a LocalizedFields container. This would create an infinite recursion. Please restructure your class definition.');
         }
 
         // Validate children field definitions
         foreach ($this->children as $field) {
             // Check for nested ExtendedBlock
             if ($field instanceof self) {
-                throw new Exception('ExtendedBlock cannot contain another ExtendedBlock.');
+                throw new \Exception('ExtendedBlock cannot contain another ExtendedBlock.');
             }
 
             // Check for Block inside ExtendedBlock
             if ($field instanceof Block) {
-                throw new Exception('ExtendedBlock cannot contain a Block. Block nesting is not supported to ensure data integrity and prevent performance issues.');
+                throw new \Exception('ExtendedBlock cannot contain a Block. Block nesting is not supported to ensure data integrity and prevent performance issues.');
             }
 
             // Check for Fieldcollections inside ExtendedBlock
             if ($field instanceof Fieldcollections) {
-                throw new Exception('ExtendedBlock cannot contain Fieldcollections. Fieldcollections are complex container types that cannot be nested inside ExtendedBlock.');
+                throw new \Exception('ExtendedBlock cannot contain Fieldcollections. Fieldcollections are complex container types that cannot be nested inside ExtendedBlock.');
             }
 
             // Check for Objectbricks inside ExtendedBlock
             if ($field instanceof Objectbricks) {
-                throw new Exception('ExtendedBlock cannot contain Objectbricks. Objectbricks are complex container types that cannot be nested inside ExtendedBlock.');
+                throw new \Exception('ExtendedBlock cannot contain Objectbricks. Objectbricks are complex container types that cannot be nested inside ExtendedBlock.');
             }
 
             // Check for LocalizedFields inside ExtendedBlock
             if ($field instanceof Localizedfields) {
-                throw new Exception('ExtendedBlock cannot contain LocalizedFields. Localized fields are not supported inside ExtendedBlock.');
+                throw new \Exception('ExtendedBlock cannot contain LocalizedFields. Localized fields are not supported inside ExtendedBlock.');
             }
 
             // Check for Classificationstore inside ExtendedBlock
             if ($field instanceof Classificationstore) {
-                throw new Exception('ExtendedBlock cannot contain Classificationstore. Classificationstore stores data in complex structures incompatible with ExtendedBlock\'s separate table storage.');
+                throw new \Exception('ExtendedBlock cannot contain Classificationstore. Classificationstore stores data in complex structures incompatible with ExtendedBlock\'s separate table storage.');
             }
         }
     }
@@ -735,21 +753,249 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
     /**
      * Returns the data for grid view.
      *
+     * Returns a structured array with summary information about block items.
+     * This enables the ExtJS grid to render a meaningful summary similar to
+     * structuredTable. The array format is:
+     * ```
+     * [
+     *     'count' => int,          // Number of items
+     *     'items' => [             // Summary of first N items (max 5)
+     *         ['index' => int, 'preview' => string],
+     *         ...
+     *     ],
+     *     'fields' => [string, ...] // Field names for column headers
+     * ]
+     * ```
+     *
      * @param mixed                $data   The block data
      * @param Concrete|null        $object The parent object
      * @param array<string, mixed> $params Additional parameters
      *
-     * @return string The grid display value
+     * @return array<string, mixed> The grid display data
      */
-    public function getDataForGrid(mixed $data, ?Concrete $object = null, array $params = []): string
+    public function getDataForGrid(mixed $data, ?Concrete $object = null, array $params = []): array
     {
-        if ($data instanceof ExtendedBlockContainer) {
-            $count = count($data->getItems());
+        $result = [
+            'count' => 0,
+            'items' => [],
+            'fields' => [],
+        ];
 
-            return sprintf('%d item%s', $count, 1 !== $count ? 's' : '');
+        if (!$data instanceof ExtendedBlockContainer) {
+            return $result;
         }
 
-        return '0 items';
+        $items = $data->getItems();
+        $result['count'] = count($items);
+
+        // Get field names for headers (limit to displayable simple types)
+        $fieldNames = $this->getGridDisplayableFieldNames();
+        $result['fields'] = $fieldNames;
+
+        // Generate preview for limited items to keep grid lightweight
+        $maxItems = min(self::GRID_MAX_PREVIEW_ITEMS, count($items));
+        for ($i = 0; $i < $maxItems; ++$i) {
+            $item = $items[$i];
+            $preview = $this->buildItemGridPreview($item, $fieldNames);
+            $result['items'][] = [
+                'index' => $item->getIndex(),
+                'preview' => $preview,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Gets field names suitable for grid display.
+     *
+     * Filters to simple field types that can be displayed as text.
+     *
+     * @return array<int, string> Array of field names
+     */
+    private function getGridDisplayableFieldNames(): array
+    {
+        $displayableTypes = [
+            'input',
+            'textarea',
+            'wysiwyg',
+            'numeric',
+            'checkbox',
+            'date',
+            'datetime',
+            'select',
+            'multiselect',
+            'country',
+            'countrymultiselect',
+            'language',
+            'languagemultiselect',
+            'email',
+            'gender',
+            'slider',
+            'booleanSelect',
+        ];
+
+        $fieldNames = [];
+
+        foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
+            if (in_array($fieldDef->getFieldtype(), $displayableTypes, true)) {
+                $fieldNames[] = $fieldName;
+                if (count($fieldNames) >= self::GRID_MAX_PREVIEW_FIELDS) {
+                    break;
+                }
+            }
+        }
+
+        return $fieldNames;
+    }
+
+    /**
+     * Builds a preview string for a block item for grid display.
+     *
+     * @param ExtendedBlockItem  $item       The block item
+     * @param array<int, string> $fieldNames Field names to include
+     *
+     * @return string The preview string
+     */
+    private function buildItemGridPreview(ExtendedBlockItem $item, array $fieldNames): string
+    {
+        $parts = [];
+
+        foreach ($fieldNames as $fieldName) {
+            $value = $item->getFieldValue($fieldName);
+            $preview = $this->formatValueForGridPreview($value);
+            if ('' !== $preview) {
+                $parts[] = $preview;
+            }
+        }
+
+        if (empty($parts)) {
+            return '(empty)';
+        }
+
+        return implode(' | ', $parts);
+    }
+
+    /**
+     * Formats a value for grid preview display.
+     *
+     * Converts various value types to a short string suitable for grid display.
+     *
+     * @param mixed $value The value to format
+     *
+     * @return string The formatted string
+     */
+    private function formatValueForGridPreview(mixed $value): string
+    {
+        if (null === $value) {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'Yes' : 'No';
+        }
+
+        if (is_array($value)) {
+            return implode(', ', array_filter(array_map('strval', $value)));
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        $stringValue = (string) $value;
+
+        // Truncate long strings
+        if (strlen($stringValue) > self::GRID_MAX_STRING_LENGTH) {
+            return substr($stringValue, 0, self::GRID_TRUNCATE_LENGTH).'...';
+        }
+
+        // Strip HTML tags for WYSIWYG content
+        return strip_tags($stringValue);
+    }
+
+    /**
+     * Returns the data for CSV export.
+     *
+     * Exports block data in a format suitable for CSV files.
+     * Each block item is represented as a JSON-encoded summary
+     * with field values, separated by newlines.
+     *
+     * @param Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object The parent object
+     * @param array<string, mixed>                                                $params Additional parameters
+     *
+     * @return string The CSV export string
+     */
+    public function getForCsvExport(
+        Localizedfield|FieldcollectionAbstract|ObjectbrickAbstract|Concrete $object,
+        array $params = [],
+    ): string {
+        $data = $this->getDataFromObjectParam($object, $params);
+
+        if (!$data instanceof ExtendedBlockContainer) {
+            return '';
+        }
+
+        $items = $data->getItems();
+        if (empty($items)) {
+            return '';
+        }
+
+        $lines = [];
+        foreach ($items as $index => $item) {
+            $itemValues = [];
+            foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
+                if (!$fieldDef instanceof Localizedfields) {
+                    $value = $item->getFieldValue($fieldName);
+                    $itemValues[$fieldName] = $this->formatValueForCsvExport($value);
+                }
+            }
+            $lines[] = sprintf(
+                '[%d] %s',
+                $index,
+                implode(' | ', array_map(
+                    static fn (string $k, string $v): string => "$k: $v",
+                    array_keys($itemValues),
+                    array_values($itemValues),
+                )),
+            );
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Formats a value for CSV export.
+     *
+     * Converts various value types to a string suitable for CSV export.
+     *
+     * @param mixed $value The value to format
+     *
+     * @return string The formatted string
+     */
+    private function formatValueForCsvExport(mixed $value): string
+    {
+        if (null === $value) {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_array($value)) {
+            return implode(',', array_filter(array_map('strval', $value)));
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d H:i:s');
+        }
+
+        // Strip HTML tags and normalize whitespace
+        $stringValue = strip_tags((string) $value);
+        $stringValue = preg_replace('/\s+/', ' ', $stringValue) ?? $stringValue;
+
+        return trim($stringValue);
     }
 
     /**
@@ -930,7 +1176,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      */
     public function getParameterTypeDeclaration(): ?string
     {
-        return '?\\' . ExtendedBlockContainer::class;
+        return '?\\'.ExtendedBlockContainer::class;
     }
 
     /**
@@ -940,7 +1186,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      */
     public function getReturnTypeDeclaration(): ?string
     {
-        return '?\\' . ExtendedBlockContainer::class;
+        return '?\\'.ExtendedBlockContainer::class;
     }
 
     /**
@@ -950,7 +1196,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      */
     public function getPhpType(): ?string
     {
-        return '\\' . ExtendedBlockContainer::class . '|null';
+        return '\\'.ExtendedBlockContainer::class.'|null';
     }
 
     /**
@@ -1351,8 +1597,8 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                     $item->setLocalizedData($localizedData[$itemId]);
                 }
             }
-        } catch (Exception $e) {
-            Logger::error('ExtendedBlock: Error loading localized data: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Logger::error('ExtendedBlock: Error loading localized data: '.$e->getMessage());
         }
     }
 
@@ -1520,7 +1766,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         $columns[] = 'INDEX `fieldname` (`fieldname`)';
         $columns[] = 'INDEX `type` (`type`)';
 
-        $sql = "CREATE TABLE {$quotedTable} (\n" . implode(",\n", $columns) . "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         $db->executeStatement($sql);
     }
@@ -1567,7 +1813,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         $columns[] = 'INDEX `language` (`language`)';
         $columns[] = 'UNIQUE KEY `ooo_id_language` (`ooo_id`, `language`)';
 
-        $sql = "CREATE TABLE {$quotedTable} (\n" . implode(",\n", $columns) . "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         $db->executeStatement($sql);
     }
