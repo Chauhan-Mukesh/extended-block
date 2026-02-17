@@ -108,6 +108,7 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
 
     /**
      * Creates the grid cell renderer function.
+     * Follows structuredTable pattern for proper table UI rendering.
      *
      * @param {Object} field - The field configuration
      * @returns {Function} The renderer function
@@ -122,13 +123,14 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
             }
 
             var count = value.count || 0;
+            var fields = value.fields || [];
             var items = value.items || [];
 
-            if (count === 0) {
+            if (count === 0 || fields.length === 0) {
                 return this.renderEmptyState();
             }
 
-            return this.renderGridContent(count, items);
+            return this.renderGridTable(count, fields, items);
         }.bind(this, field.key, field);
     },
 
@@ -166,92 +168,52 @@ pimcore.object.tags.extendedBlock = Class.create(pimcore.object.tags.abstract, {
     },
 
     /**
-     * Renders the grid content with item count and previews.
+     * Renders a proper table with headers and data rows.
+     * Follows structuredTable rendering pattern.
      *
      * @param {number} count - Total item count
-     * @param {Array} items - Array of item previews
-     * @returns {string} The rendered HTML
+     * @param {Array} fields - Array of field definitions {key, label}
+     * @param {Array} items - Array of row data objects
+     * @returns {string} The rendered HTML table
      */
-    renderGridContent: function(count, items) {
-        var html = '<div class="extended-block-grid-cell">';
-        html += this.renderItemCount(count);
-        html += this.renderItemPreviewTable(count, items);
-        html += '</div>';
-        return html;
-    },
+    renderGridTable: function(count, fields, items) {
+        var table = '<table cellpadding="2" cellspacing="0" border="1" ' +
+                    'style="font-size: 11px; border-collapse: collapse;">';
 
-    /**
-     * Renders the item count header.
-     *
-     * @param {number} count - Total item count
-     * @returns {string} The count HTML
-     */
-    renderItemCount: function(count) {
-        var html = '<div style="font-weight: bold; margin-bottom: 3px;">';
-        html += count + ' item' + (count !== 1 ? 's' : '');
-        html += '</div>';
-        return html;
-    },
-
-    /**
-     * Renders the item preview table.
-     *
-     * @param {number} count - Total item count
-     * @param {Array} items - Array of item previews
-     * @returns {string} The table HTML
-     */
-    renderItemPreviewTable: function(count, items) {
-        if (items.length === 0) {
-            return '';
+        // Column headers
+        table += '<tr>';
+        for (var c = 0; c < fields.length; c++) {
+            table += '<td style="background: #f0f0f0; font-weight: bold; padding: 2px 4px;">';
+            table += Ext.util.Format.htmlEncode(t(fields[c].label));
+            table += '</td>';
         }
+        table += '</tr>';
 
-        var html = '<table cellpadding="1" cellspacing="0" ' +
-                   'style="font-size: 11px; border-collapse: collapse;">';
-
+        // Data rows
         for (var i = 0; i < items.length; i++) {
-            html += this.renderItemPreviewRow(items[i]);
+            table += '<tr>';
+            for (var f = 0; f < fields.length; f++) {
+                var cellValue = items[i][fields[f].key] || '';
+                table += '<td style="padding: 2px 4px; max-width: 100px; ' +
+                         'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">';
+                table += Ext.util.Format.htmlEncode(cellValue);
+                table += '</td>';
+            }
+            table += '</tr>';
         }
 
+        // Show "more items" indicator if there are more
         if (count > items.length) {
-            html += this.renderMoreItemsRow(count - items.length);
+            table += '<tr>';
+            table += '<td colspan="' + fields.length + '" ' +
+                     'style="color: #999; font-style: italic; padding: 2px 4px;">';
+            table += '... and ' + (count - items.length) + ' more';
+            table += '</td>';
+            table += '</tr>';
         }
 
-        html += '</table>';
-        return html;
-    },
-
-    /**
-     * Renders a single item preview row.
-     *
-     * @param {Object} item - The item to render
-     * @returns {string} The row HTML
-     */
-    renderItemPreviewRow: function(item) {
-        var html = '<tr>';
-        html += '<td style="padding: 1px 4px 1px 0; color: #666;">';
-        html += '#' + (item.index + 1);
-        html += '</td>';
-        html += '<td style="padding: 1px 0; max-width: 150px; ' +
-                'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">';
-        html += Ext.util.Format.htmlEncode(item.preview || '');
-        html += '</td>';
-        html += '</tr>';
-        return html;
-    },
-
-    /**
-     * Renders the "more items" indicator row.
-     *
-     * @param {number} remainingCount - Number of remaining items
-     * @returns {string} The row HTML
-     */
-    renderMoreItemsRow: function(remainingCount) {
-        var html = '<tr>';
-        html += '<td colspan="2" style="color: #999; font-style: italic;">';
-        html += '... and ' + remainingCount + ' more';
-        html += '</td>';
-        html += '</tr>';
-        return html;
+        table += '</table>';
+        return table;
     },
 
     /**

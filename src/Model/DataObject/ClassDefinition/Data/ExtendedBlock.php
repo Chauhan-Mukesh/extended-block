@@ -753,17 +753,19 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
     /**
      * Returns the data for grid view.
      *
-     * Returns a structured array with summary information about block items.
-     * This enables the ExtJS grid to render a meaningful summary similar to
-     * structuredTable. The array format is:
+     * Returns a structured array with data for table rendering in ExtJS grid.
+     * Format follows structuredTable pattern for proper table UI rendering:
      * ```
      * [
-     *     'count' => int,          // Number of items
-     *     'items' => [             // Summary of first N items (max 5)
-     *         ['index' => int, 'preview' => string],
+     *     'count' => int,              // Total number of items
+     *     'fields' => [                // Column definitions (child fields)
+     *         ['key' => string, 'label' => string],
      *         ...
      *     ],
-     *     'fields' => [string, ...] // Field names for column headers
+     *     'items' => [                 // Row data (max GRID_MAX_PREVIEW_ITEMS)
+     *         ['fieldKey' => value, ...],  // Values keyed by field name
+     *         ...
+     *     ]
      * ]
      * ```
      *
@@ -777,8 +779,8 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
     {
         $result = [
             'count' => 0,
-            'items' => [],
             'fields' => [],
+            'items' => [],
         ];
 
         if (!$data instanceof ExtendedBlockContainer) {
@@ -788,32 +790,37 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         $items = $data->getItems();
         $result['count'] = count($items);
 
-        // Get field names for headers (limit to displayable simple types)
-        $fieldNames = $this->getGridDisplayableFieldNames();
-        $result['fields'] = $fieldNames;
+        // Get field definitions for column headers (key + label)
+        $fieldDefinitions = $this->getGridDisplayableFieldDefinitions();
+        $result['fields'] = $fieldDefinitions;
 
-        // Generate preview for limited items to keep grid lightweight
+        // Generate row data for limited items to keep grid lightweight
         $maxItems = min(self::GRID_MAX_PREVIEW_ITEMS, count($items));
         for ($i = 0; $i < $maxItems; ++$i) {
             $item = $items[$i];
-            $preview = $this->buildItemGridPreview($item, $fieldNames);
-            $result['items'][] = [
-                'index' => $item->getIndex(),
-                'preview' => $preview,
-            ];
+            $rowData = [];
+            foreach ($fieldDefinitions as $fieldDef) {
+                $value = $item->getFieldValue($fieldDef['key']);
+                $rowData[$fieldDef['key']] = $this->formatValueForGridPreview($value);
+            }
+            $result['items'][] = $rowData;
         }
 
         return $result;
     }
 
     /**
-     * Gets field names suitable for grid display.
+     * Gets field definitions suitable for grid display.
      *
+     * Returns an array of field definitions with key and label for column headers.
      * Filters to simple field types that can be displayed as text.
      *
-     * @return array<int, string> Array of field names
+     * Note: If a field's title is not defined, the field name is used as the
+     * label fallback. For best results, ensure all child fields have titles set.
+     *
+     * @return array<int, array{key: string, label: string}> Array of field definitions
      */
-    private function getGridDisplayableFieldNames(): array
+    private function getGridDisplayableFieldDefinitions(): array
     {
         $displayableTypes = [
             'input',
@@ -835,45 +842,21 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             'booleanSelect',
         ];
 
-        $fieldNames = [];
+        $fields = [];
 
         foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
             if (in_array($fieldDef->getFieldtype(), $displayableTypes, true)) {
-                $fieldNames[] = $fieldName;
-                if (count($fieldNames) >= self::GRID_MAX_PREVIEW_FIELDS) {
+                $fields[] = [
+                    'key' => $fieldName,
+                    'label' => $fieldDef->getTitle() ?: $fieldName,
+                ];
+                if (count($fields) >= self::GRID_MAX_PREVIEW_FIELDS) {
                     break;
                 }
             }
         }
 
-        return $fieldNames;
-    }
-
-    /**
-     * Builds a preview string for a block item for grid display.
-     *
-     * @param ExtendedBlockItem  $item       The block item
-     * @param array<int, string> $fieldNames Field names to include
-     *
-     * @return string The preview string
-     */
-    private function buildItemGridPreview(ExtendedBlockItem $item, array $fieldNames): string
-    {
-        $parts = [];
-
-        foreach ($fieldNames as $fieldName) {
-            $value = $item->getFieldValue($fieldName);
-            $preview = $this->formatValueForGridPreview($value);
-            if ('' !== $preview) {
-                $parts[] = $preview;
-            }
-        }
-
-        if (empty($parts)) {
-            return '(empty)';
-        }
-
-        return implode(' | ', $parts);
+        return $fields;
     }
 
     /**
