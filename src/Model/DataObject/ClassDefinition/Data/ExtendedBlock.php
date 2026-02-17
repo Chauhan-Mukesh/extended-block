@@ -815,6 +815,9 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      * Returns an array of field definitions with key and label for column headers.
      * Filters to simple field types that can be displayed as text.
      *
+     * Note: If a field's title is not defined, the field name is used as the
+     * label fallback. For best results, ensure all child fields have titles set.
+     *
      * @return array<int, array{key: string, label: string}> Array of field definitions
      */
     private function getGridDisplayableFieldDefinitions(): array
