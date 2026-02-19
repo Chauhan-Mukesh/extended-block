@@ -189,6 +189,50 @@ class ExtendedBlockValidationTest extends TestCase
     }
 
     /**
+     * Tests that ExtendedBlock blocks nested table field types.
+     *
+     * StructuredTable and Table field types create table-within-table complexity
+     * and storage issues that make them incompatible with ExtendedBlock:
+     * - StructuredTable creates N×M columns per field
+     * - Table stores serialized data defeating queryable purpose
+     */
+    public function testExtendedBlockBlocksNestedTableTypes(): void
+    {
+        $sourceFile = self::SOURCE_DIR . '/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
+        $this->assertFileExists($sourceFile, 'ExtendedBlock.php should exist');
+
+        $content = file_get_contents($sourceFile);
+
+        // Check for StructuredTable prevention
+        $this->assertStringContainsString(
+            'ExtendedBlock cannot contain StructuredTable',
+            $content,
+            'Should have StructuredTable prevention error message'
+        );
+
+        // Check for Table prevention
+        $this->assertStringContainsString(
+            'ExtendedBlock cannot contain Table',
+            $content,
+            'Should have Table prevention error message'
+        );
+
+        // Check for StructuredTable import
+        $this->assertStringContainsString(
+            'use Pimcore\Model\DataObject\ClassDefinition\Data\StructuredTable',
+            $content,
+            'Should import StructuredTable class'
+        );
+
+        // Check for Table import
+        $this->assertStringContainsString(
+            'use Pimcore\Model\DataObject\ClassDefinition\Data\Table',
+            $content,
+            'Should import Table class'
+        );
+    }
+
+    /**
      * Tests that ExtendedBlock has relational field support matrix documentation.
      *
      * The RELATIONAL FIELD SUPPORT MATRIX comment should document:
@@ -205,9 +249,9 @@ class ExtendedBlockValidationTest extends TestCase
 
         // Check for support matrix documentation
         $this->assertStringContainsString(
-            'RELATIONAL FIELD SUPPORT MATRIX',
+            'FIELD SUPPORT MATRIX',
             $content,
-            'Should have RELATIONAL FIELD SUPPORT MATRIX documentation'
+            'Should have FIELD SUPPORT MATRIX documentation'
         );
 
         // Check for SAFE category

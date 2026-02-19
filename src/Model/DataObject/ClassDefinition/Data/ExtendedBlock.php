@@ -30,8 +30,12 @@ use Pimcore\Model\DataObject\ClassDefinition\Data\Localizedfields;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Objectbricks;
 use Pimcore\Model\DataObject\ClassDefinition\Data\QueryResourcePersistenceAwareInterface;
 use Pimcore\Model\DataObject\ClassDefinition\Data\ReverseObjectRelation;
+use Pimcore\Model\DataObject\ClassDefinition\Data\StructuredTable;
+use Pimcore\Model\DataObject\ClassDefinition\Data\Table;
 use Pimcore\Model\DataObject\ClassDefinition\Layout;
 use Pimcore\Model\DataObject\Concrete;
+use Pimcore\Model\Asset;
+use Pimcore\Model\DataObject\Data\Link;
 use Pimcore\Model\DataObject\Fieldcollection\Data\AbstractData as FieldcollectionAbstract;
 use Pimcore\Model\DataObject\Localizedfield;
 use Pimcore\Model\DataObject\Objectbrick\Data\AbstractData as ObjectbrickAbstract;
@@ -86,12 +90,13 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
 
     /*
      * =========================================================================
-     * RELATIONAL FIELD SUPPORT MATRIX
+     * FIELD SUPPORT MATRIX
      * =========================================================================
      *
-     * SAFE - Directly Supported (store as simple ID reference):
+     * SAFE - Directly Supported (store as simple values):
      * - ManyToOneRelation      - Stores as single ID + type in main table
      * - Input, Textarea, Date, DateTime, Numeric, etc. - Simple scalar values
+     * - Image, Link            - Asset references with full path display
      *
      * CONDITIONALLY SAFE - Supported with care:
      * - ManyToManyRelation, ManyToManyObjectRelation - Store as comma-delimited IDs
@@ -108,6 +113,8 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      * - Block                           - Nested container
      * - ExtendedBlock                   - Self-nesting forbidden
      * - LocalizedFields                 - Complex localization handling
+     * - StructuredTable                 - Creates N×M columns, table-in-table UI
+     * - Table                           - Serialized storage, table-in-table UI
      *
      * =========================================================================
      */
@@ -778,6 +785,19 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             // Check for ReverseObjectRelation (virtual field reading owner's relations)
             if ($field instanceof ReverseObjectRelation) {
                 throw new Exception('ExtendedBlock cannot contain ReverseObjectRelation. This field type is a virtual/computed field that reads inverse relations from another object\'s forward relation, which cannot be stored independently. Consider using a different approach for bi-directional relation tracking.');
+            }
+
+            // NESTED TABLE TYPES - Must be explicitly blocked
+            // These types create table-within-table rendering complexity and storage issues.
+
+            // Check for StructuredTable (creates N×M columns, table-within-table UI)
+            if ($field instanceof StructuredTable) {
+                throw new Exception('ExtendedBlock cannot contain StructuredTable. See documentation for storage and UI complexity details.');
+            }
+
+            // Check for Table (stores serialized data, table-within-table UI)
+            if ($field instanceof Table) {
+                throw new Exception('ExtendedBlock cannot contain Table. See documentation for storage and UI complexity details.');
             }
         }
     }
@@ -1951,6 +1971,9 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             'manyToOneRelation',
             'manyToManyRelation',
             'manyToManyObjectRelation',
+            // Media types - display as full asset path
+            'image',
+            'link',
         ];
 
         $fields = [];
@@ -1971,6 +1994,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      * Formats a value for grid preview display.
      *
      * Converts various value types to a short string suitable for grid display.
+     * For media types (Image, Link), returns the full asset path for human-readable display.
      *
      * @param mixed $value The value to format
      *
@@ -1986,6 +2010,16 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             return $value ? 'Yes' : 'No';
         }
 
+        // Handle Asset objects (Image field) - show full asset path
+        if ($value instanceof Asset) {
+            return $value->getRealFullPath();
+        }
+
+        // Handle Link data objects - show the resolved path or direct URL
+        if ($value instanceof Link) {
+            return $this->formatLinkForGridPreview($value);
+        }
+
         // Handle relation elements (ManyToOneRelation) - show path/key instead of ID
         if ($value instanceof Element\ElementInterface) {
             // Try to get the key/name for display
@@ -1998,11 +2032,16 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             return $value->getRealFullPath();
         }
 
-        // Handle arrays (ManyToManyRelation) - convert element objects to keys
+        // Handle arrays (ManyToManyRelation) - convert element objects
+        // Assets always show full path; other elements prefer key for brevity
         if (is_array($value)) {
             $formattedValues = [];
             foreach ($value as $item) {
-                if ($item instanceof Element\ElementInterface) {
+                if ($item instanceof Asset) {
+                    // Assets: always show full path for media identification
+                    $formattedValues[] = $item->getRealFullPath();
+                } elseif ($item instanceof Element\ElementInterface) {
+                    // Objects/Documents: prefer key for brevity
                     $key = method_exists($item, 'getKey') ? $item->getKey() : null;
                     $formattedValues[] = $key ?: $item->getRealFullPath();
                 } else {
@@ -2029,9 +2068,34 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
     }
 
     /**
+     * Formats a Link value for grid preview display.
+     *
+     * Returns the resolved URL/path of the linked element including parameters and anchor.
+     * Uses getHref() which properly resolves internal links (documents, assets, objects)
+     * and direct URLs with query parameters.
+     *
+     * @param Link $link The link value to format
+     *
+     * @return string The formatted URL or path
+     */
+    private function formatLinkForGridPreview(Link $link): string
+    {
+        // Get the resolved href which includes the full URL with parameters and anchor
+        $href = $link->getHref();
+
+        if (!empty($href)) {
+            return $href;
+        }
+
+        // Return empty string for links without a resolved path
+        return '';
+    }
+
+    /**
      * Formats a value for CSV export.
      *
      * Converts various value types to a string suitable for CSV export.
+     * For media types (Image, Link), exports the full asset path.
      *
      * @param mixed $value The value to format
      *
@@ -2047,8 +2111,32 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             return $value ? '1' : '0';
         }
 
+        // Handle Asset objects (Image field) - export full path
+        if ($value instanceof Asset) {
+            return $value->getRealFullPath();
+        }
+
+        // Handle Link data objects - export resolved path or URL
+        if ($value instanceof Link) {
+            return $this->formatLinkForGridPreview($value);
+        }
+
+        // Handle Element interfaces (relations)
+        if ($value instanceof Element\ElementInterface) {
+            return $value->getRealFullPath();
+        }
+
         if (is_array($value)) {
-            return implode(',', array_filter(array_map('strval', $value)));
+            $formattedValues = [];
+            foreach ($value as $item) {
+                if ($item instanceof Element\ElementInterface) {
+                    $formattedValues[] = $item->getRealFullPath();
+                } else {
+                    $formattedValues[] = (string) $item;
+                }
+            }
+
+            return implode(',', array_filter($formattedValues));
         }
 
         if ($value instanceof DateTimeInterface) {
