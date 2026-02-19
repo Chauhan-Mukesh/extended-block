@@ -358,36 +358,45 @@ class ExtendedBlockValidationTest extends TestCase
     }
 
     /**
-     * Tests that ExtendedBlock uses plain column names for DBAL insert.
+     * Tests that ExtendedBlock uses quoteIdentifier for SQL column names.
      *
-     * DBAL's insert() method expects plain column names as array keys.
-     * Using quoteIdentifier() for keys would cause "Unknown column" errors.
+     * MySQL reserved keywords like 'index' must be quoted in SQL statements.
+     * DBAL's insert() method does NOT automatically quote reserved keywords,
+     * so we use raw SQL with quoteIdentifier() to handle this properly.
      */
-    public function testExtendedBlockUsesPlainColumnNamesForInsert(): void
+    public function testExtendedBlockUsesQuoteIdentifierForReservedKeywords(): void
     {
         $sourceFile = self::SOURCE_DIR . '/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
         $this->assertFileExists($sourceFile, 'ExtendedBlock.php should exist');
 
         $content = file_get_contents($sourceFile);
 
-        // Check that the saveBlockItem method documentation explains the issue
+        // Check that saveBlockItem uses quoteIdentifier for column names
         $this->assertStringContainsString(
-            'DBAL\'s insert() method handles identifier quoting internally',
+            '$db->quoteIdentifier($column)',
             $content,
-            'Should document that DBAL handles identifier quoting internally'
+            'Should use quoteIdentifier() to quote column names'
         );
 
-        // Check that plain column names are used
+        // Check that the method builds SQL manually with quoted identifiers
         $this->assertStringContainsString(
-            "'o_id' =>",
+            'Build SQL manually with quoted identifiers',
             $content,
-            'Should use plain column names for DBAL insert'
+            'Should document that SQL is built manually with quoted identifiers'
         );
 
+        // Check that the 'index' column is included in the data array (it's a reserved keyword)
         $this->assertStringContainsString(
-            "'fieldname' =>",
+            "'index' => \$index",
             $content,
-            'Should use plain column names for DBAL insert'
+            'Should include index column which is a MySQL reserved keyword'
+        );
+
+        // Check that executeStatement is used instead of insert()
+        $this->assertStringContainsString(
+            '$db->executeStatement($sql, $values)',
+            $content,
+            'Should use executeStatement() for raw SQL with quoted identifiers'
         );
     }
 }
