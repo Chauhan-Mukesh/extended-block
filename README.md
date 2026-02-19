@@ -438,6 +438,32 @@ ExtendedBlock has specific field restrictions to ensure data integrity and preve
 | AdvancedManyToManyObjectRelation | Complex metadata per relation not supported |
 | ReverseObjectRelation | Virtual field, reads owner's relations |
 | Classificationstore | Complex multi-table structure |
+| StructuredTable | Creates N×M columns per field, table-in-table UI complexity |
+| Table | Serialized storage defeats queryable purpose, table-in-table UI complexity |
+
+### Why StructuredTable and Table are Blocked
+
+**StructuredTable** and **Table** field types represent nested table structures that create significant complexity when used inside ExtendedBlock:
+
+**StructuredTable Issues:**
+- Creates `rows × columns` number of database columns per field (e.g., 3 rows × 4 columns = 12 columns)
+- This would significantly bloat the ExtendedBlock table schema
+- Renders as a full table in the UI, causing table-within-table nesting
+- Each row-column combination requires separate column management
+
+**Table Issues:**
+- Stores data as serialized PHP arrays in a single LONGTEXT column
+- Serialized storage defeats ExtendedBlock's purpose of queryable separate tables
+- Renders as a dynamic table grid, causing table-within-table nesting
+- Cannot be efficiently queried via SQL
+
+**UI/UX Concerns:**
+- Both types render as tables within the ExtendedBlock grid, creating nested table complexity
+- Potential for layout instability and performance degradation
+- Excessive DOM injection when rendering table-within-table structures
+- Large datasets can cause significant memory and rendering overhead
+
+If you need table-like data within ExtendedBlock, consider using multiple simple fields or restructuring your data model.
 
 ### Supported Field Types
 

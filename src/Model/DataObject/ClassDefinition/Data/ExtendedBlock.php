@@ -30,6 +30,8 @@ use Pimcore\Model\DataObject\ClassDefinition\Data\Localizedfields;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Objectbricks;
 use Pimcore\Model\DataObject\ClassDefinition\Data\QueryResourcePersistenceAwareInterface;
 use Pimcore\Model\DataObject\ClassDefinition\Data\ReverseObjectRelation;
+use Pimcore\Model\DataObject\ClassDefinition\Data\StructuredTable;
+use Pimcore\Model\DataObject\ClassDefinition\Data\Table;
 use Pimcore\Model\DataObject\ClassDefinition\Layout;
 use Pimcore\Model\DataObject\Concrete;
 use Pimcore\Model\Asset;
@@ -88,12 +90,13 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
 
     /*
      * =========================================================================
-     * RELATIONAL FIELD SUPPORT MATRIX
+     * FIELD SUPPORT MATRIX
      * =========================================================================
      *
-     * SAFE - Directly Supported (store as simple ID reference):
+     * SAFE - Directly Supported (store as simple values):
      * - ManyToOneRelation      - Stores as single ID + type in main table
      * - Input, Textarea, Date, DateTime, Numeric, etc. - Simple scalar values
+     * - Image, Link            - Asset references with full path display
      *
      * CONDITIONALLY SAFE - Supported with care:
      * - ManyToManyRelation, ManyToManyObjectRelation - Store as comma-delimited IDs
@@ -110,6 +113,8 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      * - Block                           - Nested container
      * - ExtendedBlock                   - Self-nesting forbidden
      * - LocalizedFields                 - Complex localization handling
+     * - StructuredTable                 - Creates N×M columns, table-in-table UI
+     * - Table                           - Serialized storage, table-in-table UI
      *
      * =========================================================================
      */
@@ -780,6 +785,19 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             // Check for ReverseObjectRelation (virtual field reading owner's relations)
             if ($field instanceof ReverseObjectRelation) {
                 throw new Exception('ExtendedBlock cannot contain ReverseObjectRelation. This field type is a virtual/computed field that reads inverse relations from another object\'s forward relation, which cannot be stored independently. Consider using a different approach for bi-directional relation tracking.');
+            }
+
+            // NESTED TABLE TYPES - Must be explicitly blocked
+            // These types create table-within-table rendering complexity and storage issues.
+
+            // Check for StructuredTable (creates N×M columns, table-within-table UI)
+            if ($field instanceof StructuredTable) {
+                throw new Exception('ExtendedBlock cannot contain StructuredTable. See documentation for storage and UI complexity details.');
+            }
+
+            // Check for Table (stores serialized data, table-within-table UI)
+            if ($field instanceof Table) {
+                throw new Exception('ExtendedBlock cannot contain Table. See documentation for storage and UI complexity details.');
             }
         }
     }
