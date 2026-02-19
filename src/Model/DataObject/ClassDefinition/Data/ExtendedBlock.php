@@ -2014,13 +2014,16 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             return $value->getRealFullPath();
         }
 
-        // Handle arrays (ManyToManyRelation) - convert element objects to keys
+        // Handle arrays (ManyToManyRelation) - convert element objects
+        // Assets always show full path; other elements prefer key for brevity
         if (is_array($value)) {
             $formattedValues = [];
             foreach ($value as $item) {
                 if ($item instanceof Asset) {
+                    // Assets: always show full path for media identification
                     $formattedValues[] = $item->getRealFullPath();
                 } elseif ($item instanceof Element\ElementInterface) {
+                    // Objects/Documents: prefer key for brevity
                     $key = method_exists($item, 'getKey') ? $item->getKey() : null;
                     $formattedValues[] = $key ?: $item->getRealFullPath();
                 } else {
@@ -2108,9 +2111,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         if (is_array($value)) {
             $formattedValues = [];
             foreach ($value as $item) {
-                if ($item instanceof Asset) {
-                    $formattedValues[] = $item->getRealFullPath();
-                } elseif ($item instanceof Element\ElementInterface) {
+                if ($item instanceof Element\ElementInterface) {
                     $formattedValues[] = $item->getRealFullPath();
                 } else {
                     $formattedValues[] = (string) $item;
