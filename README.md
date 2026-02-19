@@ -454,6 +454,33 @@ ExtendedBlock supports the following field types:
 
 > **Note:** Simple relation fields store element references (ID + type) directly in the ExtendedBlock table. The table prefix is configurable via `extended_block.table_prefix` (default: `object_eb_`).
 
+### Grid Rendering Behavior
+
+ExtendedBlock displays a preview table in the object grid view. The following describes how different field types are rendered:
+
+| Field Type | Grid Display |
+|------------|--------------|
+| **Text fields** (Input, Textarea, WYSIWYG, Email) | Text content (truncated to 50 characters) |
+| **Numeric fields** (Numeric, Slider) | Numeric value |
+| **Boolean fields** (Checkbox, BooleanSelect) | "Yes" or "No" |
+| **Selection fields** (Select, Multiselect, etc.) | Selected value(s) |
+| **Date fields** (Date, DateTime) | Formatted date (Y-m-d) |
+| **Relations** (ManyToOne, ManyToMany) | Element key or path |
+| **Image** | Full asset path (e.g., `/Products/Sample/image.jpg`) |
+| **Link** | Link path or URL |
+
+**Grid Preview Limits:**
+- Maximum 5 items are shown in the grid preview
+- String values are truncated to 50 characters
+- HTML tags are stripped from WYSIWYG content
+
+**Media Field Rendering Strategy:**
+- Image and Link fields display the full asset path for human-readable reference
+- This approach avoids performance overhead from thumbnail generation in nested grid cells
+- The full path includes the asset key (filename) for clear identification
+
+> **Note:** While Pimcore's native Image field renders thumbnails in grids, ExtendedBlock displays full asset paths to maintain performance with nested data structures and avoid N+1 asset loading issues.
+
 ## 🚫 Placement and Nesting Rules
 
 ExtendedBlock can **only** be placed at the root level of a class definition. To ensure data integrity and prevent performance issues, the following configurations are **not allowed**:

@@ -32,6 +32,8 @@ use Pimcore\Model\DataObject\ClassDefinition\Data\QueryResourcePersistenceAwareI
 use Pimcore\Model\DataObject\ClassDefinition\Data\ReverseObjectRelation;
 use Pimcore\Model\DataObject\ClassDefinition\Layout;
 use Pimcore\Model\DataObject\Concrete;
+use Pimcore\Model\Asset;
+use Pimcore\Model\DataObject\Data\Link;
 use Pimcore\Model\DataObject\Fieldcollection\Data\AbstractData as FieldcollectionAbstract;
 use Pimcore\Model\DataObject\Localizedfield;
 use Pimcore\Model\DataObject\Objectbrick\Data\AbstractData as ObjectbrickAbstract;
@@ -1951,6 +1953,9 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             'manyToOneRelation',
             'manyToManyRelation',
             'manyToManyObjectRelation',
+            // Media types - display as full asset path
+            'image',
+            'link',
         ];
 
         $fields = [];
@@ -1971,6 +1976,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      * Formats a value for grid preview display.
      *
      * Converts various value types to a short string suitable for grid display.
+     * For media types (Image, Link), returns the full asset path for human-readable display.
      *
      * @param mixed $value The value to format
      *
@@ -1984,6 +1990,16 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
 
         if (is_bool($value)) {
             return $value ? 'Yes' : 'No';
+        }
+
+        // Handle Asset objects (Image field) - show full asset path
+        if ($value instanceof Asset) {
+            return $value->getRealFullPath();
+        }
+
+        // Handle Link data objects - show the resolved path or direct URL
+        if ($value instanceof Link) {
+            return $this->formatLinkForGridPreview($value);
         }
 
         // Handle relation elements (ManyToOneRelation) - show path/key instead of ID
@@ -2002,7 +2018,9 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         if (is_array($value)) {
             $formattedValues = [];
             foreach ($value as $item) {
-                if ($item instanceof Element\ElementInterface) {
+                if ($item instanceof Asset) {
+                    $formattedValues[] = $item->getRealFullPath();
+                } elseif ($item instanceof Element\ElementInterface) {
                     $key = method_exists($item, 'getKey') ? $item->getKey() : null;
                     $formattedValues[] = $key ?: $item->getRealFullPath();
                 } else {
@@ -2029,9 +2047,37 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
     }
 
     /**
+     * Formats a Link value for grid preview display.
+     *
+     * Returns the path of the linked element or the direct URL.
+     *
+     * @param Link $link The link value to format
+     *
+     * @return string The formatted path or URL
+     */
+    private function formatLinkForGridPreview(Link $link): string
+    {
+        // Get the resolved path from the link
+        $path = $link->getPath();
+
+        if (!empty($path)) {
+            return $path;
+        }
+
+        // Fallback to text or empty string
+        $text = $link->getText();
+        if (!empty($text)) {
+            return $text;
+        }
+
+        return '';
+    }
+
+    /**
      * Formats a value for CSV export.
      *
      * Converts various value types to a string suitable for CSV export.
+     * For media types (Image, Link), exports the full asset path.
      *
      * @param mixed $value The value to format
      *
@@ -2047,8 +2093,34 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             return $value ? '1' : '0';
         }
 
+        // Handle Asset objects (Image field) - export full path
+        if ($value instanceof Asset) {
+            return $value->getRealFullPath();
+        }
+
+        // Handle Link data objects - export resolved path or URL
+        if ($value instanceof Link) {
+            return $this->formatLinkForGridPreview($value);
+        }
+
+        // Handle Element interfaces (relations)
+        if ($value instanceof Element\ElementInterface) {
+            return $value->getRealFullPath();
+        }
+
         if (is_array($value)) {
-            return implode(',', array_filter(array_map('strval', $value)));
+            $formattedValues = [];
+            foreach ($value as $item) {
+                if ($item instanceof Asset) {
+                    $formattedValues[] = $item->getRealFullPath();
+                } elseif ($item instanceof Element\ElementInterface) {
+                    $formattedValues[] = $item->getRealFullPath();
+                } else {
+                    $formattedValues[] = (string) $item;
+                }
+            }
+
+            return implode(',', array_filter($formattedValues));
         }
 
         if ($value instanceof DateTimeInterface) {
