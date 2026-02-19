@@ -101,12 +101,12 @@ pimcore.object.classes.data.extendedBlock = Class.create(pimcore.object.classes.
 
     /**
      * Returns the icon class for this data type.
-     * Uses a distinct icon different from the standard Block.
+     * Uses a distinct icon class for ExtendedBlock that's defined in admin.css.
      *
      * @returns {string} The icon class
      */
     getIconClass: function() {
-        return 'pimcore_icon_objectbricks';
+        return 'pimcore_icon_extendedBlock';
     },
 
     /**

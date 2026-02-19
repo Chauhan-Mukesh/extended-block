@@ -71,11 +71,6 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
     private const GRID_MAX_PREVIEW_ITEMS = 5;
 
     /**
-     * Maximum number of fields to show in grid preview.
-     */
-    private const GRID_MAX_PREVIEW_FIELDS = 3;
-
-    /**
      * Maximum length for truncated string values in grid.
      */
     private const GRID_MAX_STRING_LENGTH = 50;
@@ -910,9 +905,6 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                     'key' => $fieldName,
                     'label' => $fieldDef->getTitle() ?: $fieldName,
                 ];
-                if (count($fields) >= self::GRID_MAX_PREVIEW_FIELDS) {
-                    break;
-                }
             }
         }
 
