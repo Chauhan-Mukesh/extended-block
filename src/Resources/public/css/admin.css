@@ -19,6 +19,15 @@
  */
 
 /* ==========================================================================
+   Extended Block Icon - Used in grid column selector and class editor
+   ========================================================================== */
+.pimcore_icon_extendedBlock,
+.pimcore_icon_extendedblock {
+    background: url(/bundles/pimcoreadminui/img/flat-color-icons/workflow.svg) center center no-repeat !important;
+    background-size: contain !important;
+}
+
+/* ==========================================================================
    Main Container Styles - Native Pimcore Colors
    ========================================================================== */
 .extended-block-container {
