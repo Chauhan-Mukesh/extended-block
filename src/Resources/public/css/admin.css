@@ -23,8 +23,7 @@
    ========================================================================== */
 .pimcore_icon_extendedBlock,
 .pimcore_icon_extendedblock {
-    background: url(/bundles/pimcoreadminui/img/flat-color-icons/workflow.svg) center center no-repeat !important;
-    background-size: contain !important;
+    background: url(/bundles/pimcoreadmin/img/flat-color-icons/workflow.svg) center center no-repeat !important;
 }
 
 /* ==========================================================================
