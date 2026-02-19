@@ -1714,10 +1714,9 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         \Doctrine\DBAL\Connection $db,
         string $tableName,
     ): void {
-        // Build data array with plain column names.
-        // DBAL's insert() method handles identifier quoting internally - do NOT use quoteIdentifier() here.
-        // Using quoteIdentifier() would cause the array keys to contain backticks (e.g., `fieldname`),
-        // which DBAL would then treat as the literal column name, causing "Unknown column" SQL errors.
+        // Build data array for the insert.
+        // Note: We use raw SQL with quoteIdentifier() for column names because 'index' is a MySQL
+        // reserved keyword. DBAL's insert() method does NOT automatically quote reserved keywords.
         $data = [
             'o_id' => $object->getId(),
             'fieldname' => $this->getName(),
@@ -1754,8 +1753,27 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             }
         }
 
-        // DBAL's insert method handles identifier quoting and uses parameterized queries
-        $db->insert($tableName, $data);
+        // Build SQL manually with quoted identifiers to handle MySQL reserved keywords like 'index'.
+        // DBAL's insert() method does NOT automatically quote reserved keywords in column names.
+        $quotedTable = $db->quoteIdentifier($tableName);
+        $quotedColumns = [];
+        $placeholders = [];
+        $values = [];
+
+        foreach ($data as $column => $value) {
+            $quotedColumns[] = $db->quoteIdentifier($column);
+            $placeholders[] = '?';
+            $values[] = $value;
+        }
+
+        $sql = sprintf(
+            'INSERT INTO %s (%s) VALUES (%s)',
+            $quotedTable,
+            implode(', ', $quotedColumns),
+            implode(', ', $placeholders)
+        );
+
+        $db->executeStatement($sql, $values);
         $item->setId((int) $db->lastInsertId());
     }
 
@@ -1804,8 +1822,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                     continue;
                 }
 
-                // Build data array with plain column names.
-                // DBAL's insert() method handles identifier quoting internally - do NOT use quoteIdentifier() here.
+                // Build data array for the insert.
                 $data = [
                     'ooo_id' => $item->getId(),
                     'language' => $language,
@@ -1816,8 +1833,25 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                 // existing installations that may have localized data.
                 Logger::debug('ExtendedBlock: saveLocalizedData called - this is deprecated functionality');
 
-                // DBAL's insert method handles identifier quoting and uses parameterized queries
-                $db->insert($localizedTableName, $data);
+                // Build SQL manually with quoted identifiers for consistency.
+                $quotedColumns = [];
+                $placeholders = [];
+                $values = [];
+
+                foreach ($data as $column => $value) {
+                    $quotedColumns[] = $db->quoteIdentifier($column);
+                    $placeholders[] = '?';
+                    $values[] = $value;
+                }
+
+                $sql = sprintf(
+                    'INSERT INTO %s (%s) VALUES (%s)',
+                    $quotedTable,
+                    implode(', ', $quotedColumns),
+                    implode(', ', $placeholders)
+                );
+
+                $db->executeStatement($sql, $values);
             }
         }
     }
