@@ -19,6 +19,7 @@ use Pimcore\Logger;
 use Pimcore\Model\DataObject\ClassDefinition;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Localizedfields;
+use Pimcore\Model\DataObject\ClassDefinition\Data\QueryResourcePersistenceAwareInterface;
 
 /**
  * Service for managing Extended Block database tables.
@@ -377,22 +378,47 @@ class TableSchemaService
 
         // Add columns for each field in children definitions
         foreach ($fieldDefinition->getFieldDefinitions() as $field) {
-            if (!$field instanceof Localizedfields) {
-                // Use method_exists to safely call getColumnType
-                if (method_exists($field, 'getColumnType')) {
-                    $columnType = $field->getColumnType();
-                    if ($columnType) {
-                        // Validate field name before using it as column name
-                        $fieldName = $field->getName();
-                        IdentifierValidator::validateColumnName($fieldName);
-                        $quotedField = $this->db->quoteIdentifier($fieldName);
+            if ($field instanceof Localizedfields) {
+                continue;
+            }
+
+            $fieldName = $field->getName();
+            $fieldTitle = $field->getTitle() ?: $fieldName;
+
+            // Handle relation fields that use QueryResourcePersistenceAwareInterface
+            // These fields use getQueryColumnType() which returns multiple columns (e.g., id and type)
+            if ($field instanceof QueryResourcePersistenceAwareInterface && method_exists($field, 'getQueryColumnType')) {
+                $queryColumnTypes = $field->getQueryColumnType();
+                if (is_array($queryColumnTypes)) {
+                    foreach ($queryColumnTypes as $colSuffix => $colType) {
+                        // Column names: fieldname__id, fieldname__type
+                        $colName = $fieldName.'__'.$colSuffix;
+                        IdentifierValidator::validateColumnName($colName);
+                        $quotedCol = $this->db->quoteIdentifier($colName);
                         $columns[] = sprintf(
-                            '%s %s COMMENT "%s"',
-                            $quotedField,
-                            $columnType,
-                            addslashes($field->getTitle() ?: $fieldName)
+                            '%s %s COMMENT "%s (%s)"',
+                            $quotedCol,
+                            $colType,
+                            addslashes($fieldTitle),
+                            $colSuffix
                         );
                     }
+                    continue;
+                }
+            }
+
+            // Handle simple fields with getColumnType
+            if (method_exists($field, 'getColumnType')) {
+                $columnType = $field->getColumnType();
+                if ($columnType) {
+                    IdentifierValidator::validateColumnName($fieldName);
+                    $quotedField = $this->db->quoteIdentifier($fieldName);
+                    $columns[] = sprintf(
+                        '%s %s COMMENT "%s"',
+                        $quotedField,
+                        $columnType,
+                        addslashes($fieldTitle)
+                    );
                 }
             }
         }
@@ -457,16 +483,31 @@ class TableSchemaService
         ];
 
         foreach ($fieldDefinition->getFieldDefinitions() as $field) {
-            if (!$field instanceof Localizedfields) {
-                // Use method_exists to safely call getColumnType
-                if (method_exists($field, 'getColumnType')) {
-                    $columnType = $field->getColumnType();
-                    if ($columnType) {
-                        // Validate field name before using it as column name
-                        $fieldName = $field->getName();
-                        IdentifierValidator::validateColumnName($fieldName);
-                        $columns[$fieldName] = $columnType;
+            if ($field instanceof Localizedfields) {
+                continue;
+            }
+
+            $fieldName = $field->getName();
+
+            // Handle relation fields that use QueryResourcePersistenceAwareInterface
+            if ($field instanceof QueryResourcePersistenceAwareInterface && method_exists($field, 'getQueryColumnType')) {
+                $queryColumnTypes = $field->getQueryColumnType();
+                if (is_array($queryColumnTypes)) {
+                    foreach ($queryColumnTypes as $colSuffix => $colType) {
+                        $colName = $fieldName.'__'.$colSuffix;
+                        IdentifierValidator::validateColumnName($colName);
+                        $columns[$colName] = $colType;
                     }
+                    continue;
+                }
+            }
+
+            // Handle simple fields with getColumnType
+            if (method_exists($field, 'getColumnType')) {
+                $columnType = $field->getColumnType();
+                if ($columnType) {
+                    IdentifierValidator::validateColumnName($fieldName);
+                    $columns[$fieldName] = $columnType;
                 }
             }
         }

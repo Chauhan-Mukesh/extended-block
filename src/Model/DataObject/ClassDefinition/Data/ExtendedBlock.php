@@ -18,16 +18,21 @@ use ExtendedBlockBundle\Service\IdentifierValidator;
 use Pimcore\Db;
 use Pimcore\Logger;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
+use Pimcore\Model\DataObject\ClassDefinition\Data\AdvancedManyToManyObjectRelation;
+use Pimcore\Model\DataObject\ClassDefinition\Data\AdvancedManyToManyRelation;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Block;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Classificationstore;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Fieldcollections;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Localizedfields;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Objectbricks;
+use Pimcore\Model\DataObject\ClassDefinition\Data\QueryResourcePersistenceAwareInterface;
+use Pimcore\Model\DataObject\ClassDefinition\Data\ReverseObjectRelation;
 use Pimcore\Model\DataObject\ClassDefinition\Layout;
 use Pimcore\Model\DataObject\Concrete;
 use Pimcore\Model\DataObject\Fieldcollection\Data\AbstractData as FieldcollectionAbstract;
 use Pimcore\Model\DataObject\Localizedfield;
 use Pimcore\Model\DataObject\Objectbrick\Data\AbstractData as ObjectbrickAbstract;
+use Pimcore\Model\Element;
 
 /**
  * Extended Block Data Type Definition.
@@ -79,6 +84,34 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      * Length of truncated string prefix (GRID_MAX_STRING_LENGTH - 3 for "...").
      */
     private const GRID_TRUNCATE_LENGTH = 47;
+
+    /*
+     * =========================================================================
+     * RELATIONAL FIELD SUPPORT MATRIX
+     * =========================================================================
+     *
+     * SAFE - Directly Supported (store as simple ID reference):
+     * - ManyToOneRelation      - Stores as single ID + type in main table
+     * - Input, Textarea, Date, DateTime, Numeric, etc. - Simple scalar values
+     *
+     * CONDITIONALLY SAFE - Supported with care:
+     * - ManyToManyRelation, ManyToManyObjectRelation - Store as comma-delimited IDs
+     *   Note: These use separate relation tables in Pimcore, but ExtendedBlock
+     *   serializes them as text using getDataForResource().
+     *
+     * UNSAFE - Explicitly Blocked:
+     * - AdvancedManyToManyRelation      - Complex metadata per relation
+     * - AdvancedManyToManyObjectRelation - Complex metadata per relation
+     * - ReverseObjectRelation           - Virtual field, reads owner's relations
+     * - Fieldcollections                - Multi-table container
+     * - Objectbricks                    - Multi-table container
+     * - Classificationstore             - Multi-table structure
+     * - Block                           - Nested container
+     * - ExtendedBlock                   - Self-nesting forbidden
+     * - LocalizedFields                 - Complex localization handling
+     *
+     * =========================================================================
+     */
 
     /**
      * Data type identifier for Pimcore.
@@ -683,6 +716,10 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      * - No Fieldcollections inside ExtendedBlock
      * - No Objectbricks inside ExtendedBlock
      * - No LocalizedFields inside ExtendedBlock
+     * - No Classificationstore inside ExtendedBlock
+     * - No AdvancedManyToManyRelation inside ExtendedBlock
+     * - No AdvancedManyToManyObjectRelation inside ExtendedBlock
+     * - No ReverseObjectRelation inside ExtendedBlock
      *
      * @throws \Exception If validation fails
      */
@@ -723,6 +760,25 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             // Check for Classificationstore inside ExtendedBlock
             if ($field instanceof Classificationstore) {
                 throw new \Exception('ExtendedBlock cannot contain Classificationstore. Classificationstore stores data in complex structures incompatible with ExtendedBlock\'s separate table storage.');
+            }
+
+            // UNSAFE RELATIONAL TYPES - Must be explicitly blocked
+            // These types use complex metadata storage or virtual relation lookups
+            // that are incompatible with ExtendedBlock's separate table storage.
+
+            // Check for AdvancedManyToManyRelation (has metadata per relation)
+            if ($field instanceof AdvancedManyToManyRelation) {
+                throw new \Exception('ExtendedBlock cannot contain AdvancedManyToManyRelation. This field type stores additional metadata per relation in separate tables, which is incompatible with ExtendedBlock\'s storage model. Use ManyToManyRelation instead for simple relations.');
+            }
+
+            // Check for AdvancedManyToManyObjectRelation (has metadata per relation)
+            if ($field instanceof AdvancedManyToManyObjectRelation) {
+                throw new \Exception('ExtendedBlock cannot contain AdvancedManyToManyObjectRelation. This field type stores additional metadata per relation in separate tables, which is incompatible with ExtendedBlock\'s storage model. Use ManyToManyObjectRelation instead for simple relations.');
+            }
+
+            // Check for ReverseObjectRelation (virtual field reading owner's relations)
+            if ($field instanceof ReverseObjectRelation) {
+                throw new \Exception('ExtendedBlock cannot contain ReverseObjectRelation. This field type is a virtual/computed field that reads inverse relations from another object\'s forward relation, which cannot be stored independently. Consider using a different approach for bi-directional relation tracking.');
             }
         }
     }
@@ -840,6 +896,10 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             'gender',
             'slider',
             'booleanSelect',
+            // Relation types - display as path/key instead of IDs
+            'manyToOneRelation',
+            'manyToManyRelation',
+            'manyToManyObjectRelation',
         ];
 
         $fields = [];
@@ -878,8 +938,31 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             return $value ? 'Yes' : 'No';
         }
 
+        // Handle relation elements (ManyToOneRelation) - show path/key instead of ID
+        if ($value instanceof Element\ElementInterface) {
+            // Try to get the key/name for display
+            $key = method_exists($value, 'getKey') ? $value->getKey() : null;
+            if ($key) {
+                return $key;
+            }
+
+            // Fallback to path
+            return $value->getRealFullPath();
+        }
+
+        // Handle arrays (ManyToManyRelation) - convert element objects to keys
         if (is_array($value)) {
-            return implode(', ', array_filter(array_map('strval', $value)));
+            $formattedValues = [];
+            foreach ($value as $item) {
+                if ($item instanceof Element\ElementInterface) {
+                    $key = method_exists($item, 'getKey') ? $item->getKey() : null;
+                    $formattedValues[] = $key ?: $item->getRealFullPath();
+                } else {
+                    $formattedValues[] = (string) $item;
+                }
+            }
+
+            return implode(', ', array_filter($formattedValues));
         }
 
         if ($value instanceof \DateTimeInterface) {
@@ -1511,8 +1594,38 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
 
         // Map row data to item fields based on children field definitions
         foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
+            // Handle relation fields that use QueryResourcePersistenceAwareInterface
+            // These fields store data as multiple columns (e.g., fieldname__id, fieldname__type)
+            if ($fieldDef instanceof QueryResourcePersistenceAwareInterface && method_exists($fieldDef, 'getQueryColumnType')) {
+                $queryColumnTypes = $fieldDef->getQueryColumnType();
+                if (is_array($queryColumnTypes)) {
+                    // Build the query resource data array from the row
+                    $queryData = [];
+                    $hasData = false;
+                    foreach (array_keys($queryColumnTypes) as $colSuffix) {
+                        $colName = $fieldName.'__'.$colSuffix;
+                        if (isset($row[$colName])) {
+                            $queryData[$fieldName.'__'.$colSuffix] = $row[$colName];
+                            if (null !== $row[$colName]) {
+                                $hasData = true;
+                            }
+                        }
+                    }
+
+                    // Only load the element if we have valid data
+                    if ($hasData && isset($queryData[$fieldName.'__id']) && isset($queryData[$fieldName.'__type'])) {
+                        $element = Element\Service::getElementById(
+                            $queryData[$fieldName.'__type'],
+                            (int) $queryData[$fieldName.'__id']
+                        );
+                        $item->setFieldValue($fieldName, $element);
+                    }
+                    continue;
+                }
+            }
+
+            // Handle simple fields
             if (isset($row[$fieldName])) {
-                // Use the concrete field type's method if available
                 if (method_exists($fieldDef, 'getDataFromResource')) {
                     $value = $fieldDef->getDataFromResource($row[$fieldName], $object);
                 } else {
@@ -1601,30 +1714,47 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         \Doctrine\DBAL\Connection $db,
         string $tableName,
     ): void {
-        // Use quoted column names for SQL reserved keywords to prevent syntax errors
-        // Note: 'index' and 'type' are reserved keywords in SQL
+        // Build data array with plain column names.
+        // DBAL's insert() method handles identifier quoting internally - do NOT use quoteIdentifier() here.
+        // Using quoteIdentifier() would cause the array keys to contain backticks (e.g., `fieldname`),
+        // which DBAL would then treat as the literal column name, causing "Unknown column" SQL errors.
         $data = [
-            $db->quoteIdentifier('o_id') => $object->getId(),
-            $db->quoteIdentifier('fieldname') => $this->getName(),
-            $db->quoteIdentifier('index') => $index,
-            $db->quoteIdentifier('type') => $item->getType(),
+            'o_id' => $object->getId(),
+            'fieldname' => $this->getName(),
+            'index' => $index,
+            'type' => $item->getType(),
         ];
 
         // Add field values based on children field definitions
         foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
-            if (!$fieldDef instanceof Localizedfields) {
-                $value = $item->getFieldValue($fieldName);
-                // Use the concrete field type's method if available
-                // Quote column names to handle any reserved keywords in user-defined fields
-                if (method_exists($fieldDef, 'getDataForResource')) {
-                    $data[$db->quoteIdentifier($fieldName)] = $fieldDef->getDataForResource($value, $object);
-                } else {
-                    $data[$db->quoteIdentifier($fieldName)] = $value;
+            if ($fieldDef instanceof Localizedfields) {
+                continue;
+            }
+
+            $value = $item->getFieldValue($fieldName);
+
+            // Handle relation fields that use QueryResourcePersistenceAwareInterface
+            // These fields store data as multiple columns (e.g., fieldname__id, fieldname__type)
+            if ($fieldDef instanceof QueryResourcePersistenceAwareInterface && method_exists($fieldDef, 'getDataForQueryResource')) {
+                $queryData = $fieldDef->getDataForQueryResource($value, $object);
+                if (is_array($queryData)) {
+                    foreach ($queryData as $colKey => $colValue) {
+                        // The key returned is like "fieldname__id" - use it directly
+                        $data[$colKey] = $colValue;
+                    }
+                    continue;
                 }
+            }
+
+            // Use the concrete field type's method if available for simple fields
+            if (method_exists($fieldDef, 'getDataForResource')) {
+                $data[$fieldName] = $fieldDef->getDataForResource($value, $object);
+            } else {
+                $data[$fieldName] = $value;
             }
         }
 
-        // DBAL's insert method uses parameterized queries, which is safe
+        // DBAL's insert method handles identifier quoting and uses parameterized queries
         $db->insert($tableName, $data);
         $item->setId((int) $db->lastInsertId());
     }
@@ -1674,10 +1804,11 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                     continue;
                 }
 
-                // Use quoted column names for consistency and to handle potential reserved keywords
+                // Build data array with plain column names.
+                // DBAL's insert() method handles identifier quoting internally - do NOT use quoteIdentifier() here.
                 $data = [
-                    $db->quoteIdentifier('ooo_id') => $item->getId(),
-                    $db->quoteIdentifier('language') => $language,
+                    'ooo_id' => $item->getId(),
+                    'language' => $language,
                 ];
 
                 // LocalizedFields are no longer supported in ExtendedBlock.
@@ -1685,7 +1816,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                 // existing installations that may have localized data.
                 Logger::debug('ExtendedBlock: saveLocalizedData called - this is deprecated functionality');
 
-                // DBAL's insert method uses parameterized queries, which is safe
+                // DBAL's insert method handles identifier quoting and uses parameterized queries
                 $db->insert($localizedTableName, $data);
             }
         }
@@ -1712,6 +1843,9 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         );
 
         if ($tableExists) {
+            // Table exists - validate and sync schema
+            $this->validateAndSyncTableSchema($tableName, $db);
+
             return;
         }
 
@@ -1729,17 +1863,33 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
 
         // Add columns for each field in children definitions
         foreach ($this->getFieldDefinitions() as $fieldDef) {
-            if (!$fieldDef instanceof Localizedfields) {
-                // Use method_exists to safely call getColumnType
-                if (method_exists($fieldDef, 'getColumnType')) {
-                    $columnType = $fieldDef->getColumnType();
-                    if ($columnType) {
-                        // Validate field name before using it as column name
-                        $fieldName = $fieldDef->getName();
-                        IdentifierValidator::validateColumnName($fieldName);
-                        $quotedColumn = $db->quoteIdentifier($fieldName);
-                        $columns[] = "{$quotedColumn} {$columnType}";
+            if ($fieldDef instanceof Localizedfields) {
+                continue;
+            }
+
+            $fieldName = $fieldDef->getName();
+
+            // Handle relation fields that use QueryResourcePersistenceAwareInterface
+            if ($fieldDef instanceof QueryResourcePersistenceAwareInterface && method_exists($fieldDef, 'getQueryColumnType')) {
+                $queryColumnTypes = $fieldDef->getQueryColumnType();
+                if (is_array($queryColumnTypes)) {
+                    foreach ($queryColumnTypes as $colSuffix => $colType) {
+                        $colName = $fieldName.'__'.$colSuffix;
+                        IdentifierValidator::validateColumnName($colName);
+                        $quotedColumn = $db->quoteIdentifier($colName);
+                        $columns[] = "{$quotedColumn} {$colType}";
                     }
+                    continue;
+                }
+            }
+
+            // Handle simple fields with getColumnType
+            if (method_exists($fieldDef, 'getColumnType')) {
+                $columnType = $fieldDef->getColumnType();
+                if ($columnType) {
+                    IdentifierValidator::validateColumnName($fieldName);
+                    $quotedColumn = $db->quoteIdentifier($fieldName);
+                    $columns[] = "{$quotedColumn} {$columnType}";
                 }
             }
         }
@@ -1752,6 +1902,87 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         $db->executeStatement($sql);
+    }
+
+    /**
+     * Validates and synchronizes table schema with field definitions.
+     *
+     * Adds missing columns to the table when field definitions have been added.
+     * This prevents "Unknown column" SQL errors by ensuring the database schema
+     * matches the current class definition.
+     *
+     * Note: Columns are only added, not removed, to prevent data loss.
+     * Unused columns from removed fields should be cleaned up manually.
+     *
+     * @param string                    $tableName The table name
+     * @param \Doctrine\DBAL\Connection $db        The database connection
+     */
+    protected function validateAndSyncTableSchema(string $tableName, \Doctrine\DBAL\Connection $db): void
+    {
+        // Get existing columns from the database
+        $existingColumns = [];
+        $rows = $db->fetchAllAssociative(
+            'SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ?',
+            [$tableName]
+        );
+        foreach ($rows as $row) {
+            $existingColumns[$row['COLUMN_NAME']] = true;
+        }
+
+        // Check if all required field columns exist
+        $quotedTable = $db->quoteIdentifier($tableName);
+        foreach ($this->getFieldDefinitions() as $fieldDef) {
+            if ($fieldDef instanceof Localizedfields) {
+                continue;
+            }
+
+            $fieldName = $fieldDef->getName();
+
+            // Handle relation fields that use QueryResourcePersistenceAwareInterface
+            if ($fieldDef instanceof QueryResourcePersistenceAwareInterface && method_exists($fieldDef, 'getQueryColumnType')) {
+                $queryColumnTypes = $fieldDef->getQueryColumnType();
+                if (is_array($queryColumnTypes)) {
+                    foreach ($queryColumnTypes as $colSuffix => $colType) {
+                        $colName = $fieldName.'__'.$colSuffix;
+                        if (!isset($existingColumns[$colName])) {
+                            IdentifierValidator::validateColumnName($colName);
+                            $quotedColumn = $db->quoteIdentifier($colName);
+
+                            try {
+                                $sql = "ALTER TABLE {$quotedTable} ADD COLUMN {$quotedColumn} {$colType}";
+                                $db->executeStatement($sql);
+                                Logger::info("ExtendedBlock: Added missing column {$colName} to {$tableName}");
+                            } catch (\Exception $e) {
+                                Logger::error("ExtendedBlock: Failed to add column {$colName} to {$tableName}: ".$e->getMessage());
+                                throw new \RuntimeException("Failed to synchronize ExtendedBlock table schema for field '{$colName}'. The table '{$tableName}' may need manual migration. Error: ".$e->getMessage(), 0, $e);
+                            }
+                        }
+                    }
+                    continue;
+                }
+            }
+
+            // Handle simple fields with getColumnType
+            if (method_exists($fieldDef, 'getColumnType')) {
+                $columnType = $fieldDef->getColumnType();
+                if ($columnType) {
+                    // If column doesn't exist, add it
+                    if (!isset($existingColumns[$fieldName])) {
+                        IdentifierValidator::validateColumnName($fieldName);
+                        $quotedColumn = $db->quoteIdentifier($fieldName);
+
+                        try {
+                            $sql = "ALTER TABLE {$quotedTable} ADD COLUMN {$quotedColumn} {$columnType}";
+                            $db->executeStatement($sql);
+                            Logger::info("ExtendedBlock: Added missing column {$fieldName} to {$tableName}");
+                        } catch (\Exception $e) {
+                            Logger::error("ExtendedBlock: Failed to add column {$fieldName} to {$tableName}: ".$e->getMessage());
+                            throw new \RuntimeException("Failed to synchronize ExtendedBlock table schema for field '{$fieldName}'. The table '{$tableName}' may need manual migration. Error: ".$e->getMessage(), 0, $e);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**

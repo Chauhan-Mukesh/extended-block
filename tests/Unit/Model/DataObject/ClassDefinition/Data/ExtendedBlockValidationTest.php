@@ -22,12 +22,19 @@ use PHPUnit\Framework\TestCase;
  * - No ExtendedBlock inside LocalizedFields, FieldCollections, ObjectBricks, or Block
  * - No ExtendedBlock inside ExtendedBlock
  * - No Block, Fieldcollections, or Objectbricks inside ExtendedBlock
+ * - No AdvancedManyToManyRelation or AdvancedManyToManyObjectRelation inside ExtendedBlock
+ * - No ReverseObjectRelation inside ExtendedBlock
  *
  * Note: These tests focus on testing the validation rules conceptually,
  * as the actual ExtendedBlock class requires Pimcore's runtime environment.
  */
 class ExtendedBlockValidationTest extends TestCase
 {
+    /**
+     * Path to the source directory from test directory.
+     */
+    private const SOURCE_DIR = __DIR__ . '/../../../../../../src';
+
     /**
      * Tests that placement and nesting prevention rules are documented.
      *
@@ -41,6 +48,9 @@ class ExtendedBlockValidationTest extends TestCase
      * 7. ExtendedBlock cannot contain Block
      * 8. ExtendedBlock cannot contain Fieldcollections
      * 9. ExtendedBlock cannot contain Objectbricks
+     * 10. ExtendedBlock cannot contain AdvancedManyToManyRelation
+     * 11. ExtendedBlock cannot contain AdvancedManyToManyObjectRelation
+     * 12. ExtendedBlock cannot contain ReverseObjectRelation
      */
     public function testValidationRulesAreDefined(): void
     {
@@ -57,6 +67,9 @@ class ExtendedBlockValidationTest extends TestCase
             'Block inside ExtendedBlock' => true,
             'Fieldcollections inside ExtendedBlock' => true,
             'Objectbricks inside ExtendedBlock' => true,
+            'AdvancedManyToManyRelation inside ExtendedBlock' => true,
+            'AdvancedManyToManyObjectRelation inside ExtendedBlock' => true,
+            'ReverseObjectRelation inside ExtendedBlock' => true,
         ];
 
         // All prevention rules should be active
@@ -98,7 +111,7 @@ class ExtendedBlockValidationTest extends TestCase
      */
     public function testExtendedBlockContainsNestingPreventionLogic(): void
     {
-        $sourceFile = __DIR__ . '/../../../../../../src/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
+        $sourceFile = self::SOURCE_DIR . '/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
         $this->assertFileExists($sourceFile, 'ExtendedBlock.php should exist');
 
         $content = file_get_contents($sourceFile);
@@ -140,11 +153,101 @@ class ExtendedBlockValidationTest extends TestCase
     }
 
     /**
+     * Tests that ExtendedBlock blocks advanced relational field types.
+     *
+     * Advanced relational types (AdvancedManyToManyRelation, AdvancedManyToManyObjectRelation,
+     * ReverseObjectRelation) use complex metadata storage or virtual relation lookups
+     * that are incompatible with ExtendedBlock's separate table storage.
+     */
+    public function testExtendedBlockBlocksAdvancedRelationalTypes(): void
+    {
+        $sourceFile = self::SOURCE_DIR . '/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
+        $this->assertFileExists($sourceFile, 'ExtendedBlock.php should exist');
+
+        $content = file_get_contents($sourceFile);
+
+        // Check for AdvancedManyToManyRelation prevention
+        $this->assertStringContainsString(
+            'ExtendedBlock cannot contain AdvancedManyToManyRelation',
+            $content,
+            'Should have AdvancedManyToManyRelation prevention error message'
+        );
+
+        // Check for AdvancedManyToManyObjectRelation prevention
+        $this->assertStringContainsString(
+            'ExtendedBlock cannot contain AdvancedManyToManyObjectRelation',
+            $content,
+            'Should have AdvancedManyToManyObjectRelation prevention error message'
+        );
+
+        // Check for ReverseObjectRelation prevention
+        $this->assertStringContainsString(
+            'ExtendedBlock cannot contain ReverseObjectRelation',
+            $content,
+            'Should have ReverseObjectRelation prevention error message'
+        );
+    }
+
+    /**
+     * Tests that ExtendedBlock has relational field support matrix documentation.
+     *
+     * The RELATIONAL FIELD SUPPORT MATRIX comment should document:
+     * - SAFE types (ManyToOneRelation, simple scalars)
+     * - CONDITIONALLY SAFE types (ManyToManyRelation, ManyToManyObjectRelation)
+     * - UNSAFE types (Advanced relations, reverse relations, complex containers)
+     */
+    public function testExtendedBlockHasRelationalFieldSupportMatrix(): void
+    {
+        $sourceFile = self::SOURCE_DIR . '/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
+        $this->assertFileExists($sourceFile, 'ExtendedBlock.php should exist');
+
+        $content = file_get_contents($sourceFile);
+
+        // Check for support matrix documentation
+        $this->assertStringContainsString(
+            'RELATIONAL FIELD SUPPORT MATRIX',
+            $content,
+            'Should have RELATIONAL FIELD SUPPORT MATRIX documentation'
+        );
+
+        // Check for SAFE category
+        $this->assertStringContainsString(
+            'SAFE',
+            $content,
+            'Should document SAFE field types'
+        );
+
+        // Check for UNSAFE category
+        $this->assertStringContainsString(
+            'UNSAFE',
+            $content,
+            'Should document UNSAFE field types'
+        );
+    }
+
+    /**
+     * Tests that ExtendedBlock has schema validation functionality.
+     *
+     * The validateAndSyncTableSchema method should exist to detect and fix
+     * column mismatches between the class definition and database schema.
+     */
+    public function testExtendedBlockHasSchemaValidationMethod(): void
+    {
+        $this->assertTrue(
+            method_exists(
+                'ExtendedBlockBundle\\Model\\DataObject\\ClassDefinition\\Data\\ExtendedBlock',
+                'validateAndSyncTableSchema'
+            ),
+            'ExtendedBlock should have validateAndSyncTableSchema method for schema synchronization'
+        );
+    }
+
+    /**
      * Tests that the ClassDefinitionListener contains placement validation logic.
      */
     public function testClassDefinitionListenerContainsPlacementValidation(): void
     {
-        $sourceFile = __DIR__ . '/../../../../../../src/EventListener/ClassDefinitionListener.php';
+        $sourceFile = self::SOURCE_DIR . '/EventListener/ClassDefinitionListener.php';
         $this->assertFileExists($sourceFile, 'ClassDefinitionListener.php should exist');
 
         $content = file_get_contents($sourceFile);
@@ -220,7 +323,7 @@ class ExtendedBlockValidationTest extends TestCase
      */
     public function testExtensionRegistersImplementationLoader(): void
     {
-        $sourceFile = __DIR__ . '/../../../../../../src/DependencyInjection/ExtendedBlockExtension.php';
+        $sourceFile = self::SOURCE_DIR . '/DependencyInjection/ExtendedBlockExtension.php';
         $this->assertFileExists($sourceFile, 'ExtendedBlockExtension.php should exist');
 
         $content = file_get_contents($sourceFile);
@@ -251,6 +354,40 @@ class ExtendedBlockValidationTest extends TestCase
             'class_definitions',
             $content,
             'Extension should configure class_definitions'
+        );
+    }
+
+    /**
+     * Tests that ExtendedBlock uses plain column names for DBAL insert.
+     *
+     * DBAL's insert() method expects plain column names as array keys.
+     * Using quoteIdentifier() for keys would cause "Unknown column" errors.
+     */
+    public function testExtendedBlockUsesPlainColumnNamesForInsert(): void
+    {
+        $sourceFile = self::SOURCE_DIR . '/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
+        $this->assertFileExists($sourceFile, 'ExtendedBlock.php should exist');
+
+        $content = file_get_contents($sourceFile);
+
+        // Check that the saveBlockItem method documentation explains the issue
+        $this->assertStringContainsString(
+            'DBAL\'s insert() method handles identifier quoting internally',
+            $content,
+            'Should document that DBAL handles identifier quoting internally'
+        );
+
+        // Check that plain column names are used
+        $this->assertStringContainsString(
+            "'o_id' =>",
+            $content,
+            'Should use plain column names for DBAL insert'
+        );
+
+        $this->assertStringContainsString(
+            "'fieldname' =>",
+            $content,
+            'Should use plain column names for DBAL insert'
         );
     }
 }
