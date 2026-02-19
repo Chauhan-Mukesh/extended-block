@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\EventListener;
 
+use Exception;
 use ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock;
 use ExtendedBlockBundle\Service\TableSchemaService;
 use Pimcore\Event\Model\DataObject\ClassDefinitionEvent;
@@ -58,7 +59,7 @@ class ClassDefinitionListener
      *
      * @param ClassDefinitionEvent $event The event
      *
-     * @throws \Exception If validation fails
+     * @throws Exception If validation fails
      */
     public function onPreSave(ClassDefinitionEvent $event): void
     {
@@ -72,7 +73,7 @@ class ClassDefinitionListener
             $this->validateExtendedBlockField($fieldInfo['field'], $fieldInfo['context']);
         }
 
-        Logger::debug('ExtendedBlock: Pre-save validation completed for class '.$classDefinition->getName());
+        Logger::debug('ExtendedBlock: Pre-save validation completed for class ' . $classDefinition->getName());
     }
 
     /**
@@ -102,7 +103,7 @@ class ClassDefinitionListener
                     $fieldInfo['field']->getName(),
                     $classDefinition->getName()
                 ));
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Logger::error(sprintf(
                     'ExtendedBlock: Failed to update table for field %s: %s',
                     $fieldInfo['field']->getName(),
@@ -129,7 +130,7 @@ class ClassDefinitionListener
 
         if (!empty($extendedBlockFields)) {
             Logger::warning(sprintf(
-                'ExtendedBlock: Class %s is being deleted but has %d extended block field(s). '.
+                'ExtendedBlock: Class %s is being deleted but has %d extended block field(s). ' .
                 'Database tables will be preserved. Use admin tools to remove them manually.',
                 $classDefinition->getName(),
                 count($extendedBlockFields)
@@ -182,13 +183,13 @@ class ClassDefinitionListener
      *
      * @param Localizedfields $localizedFields The LocalizedFields to check
      *
-     * @throws \Exception If ExtendedBlock is found inside LocalizedFields
+     * @throws Exception If ExtendedBlock is found inside LocalizedFields
      */
     protected function checkForExtendedBlockInLocalizedFields(Localizedfields $localizedFields): void
     {
         foreach ($localizedFields->getFieldDefinitions() as $localizedFieldDef) {
             if ($localizedFieldDef instanceof ExtendedBlock) {
-                throw new \Exception(sprintf('ExtendedBlock field "%s" cannot be placed inside LocalizedFields. ExtendedBlock can only be used at the root level of a class definition.', $localizedFieldDef->getName()));
+                throw new Exception(sprintf('ExtendedBlock field "%s" cannot be placed inside LocalizedFields. ExtendedBlock can only be used at the root level of a class definition.', $localizedFieldDef->getName()));
             }
         }
     }
@@ -200,7 +201,7 @@ class ClassDefinitionListener
      *
      * @param Fieldcollections $fieldcollections The FieldCollections field to check
      *
-     * @throws \Exception If ExtendedBlock is found (validation happens at definition level)
+     * @throws Exception If ExtendedBlock is found (validation happens at definition level)
      */
     protected function checkForExtendedBlockInFieldcollections(Fieldcollections $fieldcollections): void
     {
@@ -217,7 +218,7 @@ class ClassDefinitionListener
      *
      * @param Objectbricks $objectbricks The ObjectBricks field to check
      *
-     * @throws \Exception If ExtendedBlock is found (validation happens at definition level)
+     * @throws Exception If ExtendedBlock is found (validation happens at definition level)
      */
     protected function checkForExtendedBlockInObjectbricks(Objectbricks $objectbricks): void
     {
@@ -232,7 +233,7 @@ class ClassDefinitionListener
      *
      * @param Block $blockField The Block field to check
      *
-     * @throws \Exception If ExtendedBlock is found inside Block
+     * @throws Exception If ExtendedBlock is found inside Block
      */
     protected function checkForExtendedBlockInBlock(Block $blockField): void
     {
@@ -241,14 +242,14 @@ class ClassDefinitionListener
 
         foreach ($fieldDefinitions as $field) {
             if ($field instanceof ExtendedBlock) {
-                throw new \Exception(sprintf('ExtendedBlock field "%s" cannot be placed inside Block field "%s". Nesting ExtendedBlock inside Block is not supported.', $field->getName(), $blockName));
+                throw new Exception(sprintf('ExtendedBlock field "%s" cannot be placed inside Block field "%s". Nesting ExtendedBlock inside Block is not supported.', $field->getName(), $blockName));
             }
 
             // Also check inside LocalizedFields within Block
             if ($field instanceof Localizedfields) {
                 foreach ($field->getFieldDefinitions() as $localizedField) {
                     if ($localizedField instanceof ExtendedBlock) {
-                        throw new \Exception(sprintf('ExtendedBlock field "%s" cannot be placed inside LocalizedFields within Block field "%s". Nesting ExtendedBlock inside Block is not supported.', $localizedField->getName(), $blockName));
+                        throw new Exception(sprintf('ExtendedBlock field "%s" cannot be placed inside LocalizedFields within Block field "%s". Nesting ExtendedBlock inside Block is not supported.', $localizedField->getName(), $blockName));
                     }
                 }
             }
@@ -261,7 +262,7 @@ class ClassDefinitionListener
      * @param ExtendedBlock $field   The field to validate
      * @param string        $context The context ('root' only - ExtendedBlock can only be at root level)
      *
-     * @throws \Exception If validation fails
+     * @throws Exception If validation fails
      */
     protected function validateExtendedBlockField(ExtendedBlock $field, string $context): void
     {

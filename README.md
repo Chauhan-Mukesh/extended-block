@@ -156,16 +156,28 @@ MyExtendedBlock (ExtendedBlock)
 ### Supported Field Types
 
 The following field types can be added as sub-fields:
-- Input
-- Textarea
-- WYSIWYG
-- Numeric
-- Checkbox
-- Date
-- Select
-- Multiselect
-- Link
-- Image
+
+**Text & Content:**
+- Input, Textarea, WYSIWYG, Email
+
+**Numeric & Selection:**
+- Numeric, Checkbox, Slider, BooleanSelect
+- Select, Multiselect
+- Country, Country Multiselect
+- Language, Language Multiselect, Gender
+
+**Date & Time:**
+- Date, DateTime
+
+**Relations (simple reference storage):**
+- ManyToOneRelation
+- ManyToManyRelation
+- ManyToManyObjectRelation
+
+**Assets:**
+- Image, Link
+
+> **Note:** Relation fields store element references (ID + type) in the ExtendedBlock table. Advanced relation types with metadata (AdvancedManyToManyRelation, AdvancedManyToManyObjectRelation) and ReverseObjectRelation are not supported.
 
 ### Defining Block Types
 
@@ -252,6 +264,9 @@ echo $item->content;
 if (isset($item->title)) {
     // ...
 }
+
+// Magic unset
+unset($item->title);  // Equivalent to $item->removeFieldValue('title')
 ```
 
 ## 🔧 PHP API
@@ -344,6 +359,7 @@ use Pimcore\Db;
 
 $db = Db::get();
 $classId = Product::classId();
+// Note: Table prefix is configurable via extended_block.table_prefix (default: 'object_eb_')
 $tableName = 'object_eb_' . $classId . '_contentBlocks';
 
 // Find objects with specific content
@@ -418,23 +434,25 @@ ExtendedBlock has specific field restrictions to ensure data integrity and preve
 | FieldCollections | Complex container types cannot be nested |
 | ObjectBricks | Complex container types cannot be nested |
 | ExtendedBlock | Would cause infinite recursion |
+| AdvancedManyToManyRelation | Complex metadata per relation not supported |
+| AdvancedManyToManyObjectRelation | Complex metadata per relation not supported |
+| ReverseObjectRelation | Virtual field, reads owner's relations |
+| Classificationstore | Complex multi-table structure |
 
 ### Supported Field Types
 
-ExtendedBlock supports the following simple field types:
+ExtendedBlock supports the following field types:
 
-| Field Type | Description |
-|------------|-------------|
-| Input | Single-line text input |
-| Textarea | Multi-line text input |
-| WYSIWYG | Rich text editor |
-| Numeric | Number input |
-| Checkbox | Boolean toggle |
-| Date | Date picker |
-| Select | Dropdown selection |
-| Multiselect | Multi-value selection |
-| Link | URL input |
-| Image | Asset image selector |
+| Category | Field Types |
+|----------|-------------|
+| **Text & Content** | Input, Textarea, WYSIWYG, Email |
+| **Numeric & Boolean** | Numeric, Checkbox, Slider, BooleanSelect |
+| **Selection** | Select, Multiselect, Country, Country Multiselect, Language, Language Multiselect, Gender |
+| **Date & Time** | Date, DateTime |
+| **Relations** | ManyToOneRelation, ManyToManyRelation, ManyToManyObjectRelation |
+| **Assets** | Image, Link |
+
+> **Note:** Simple relation fields store element references (ID + type) directly in the ExtendedBlock table. The table prefix is configurable via `extended_block.table_prefix` (default: `object_eb_`).
 
 ## 🚫 Placement and Nesting Rules
 
@@ -556,25 +574,45 @@ The bundle automatically validates your class definition when saving and will th
 | `getItem(int $index)` | Get item at index |
 | `moveItem(int $from, int $to)` | Move item position |
 | `getItemsByType(string $type)` | Filter items by type |
-| `first()` | Get first item |
-| `last()` | Get last item |
+| `first()` | Get first item (or null if empty) |
+| `last()` | Get last item (or null if empty) |
 | `clear()` | Remove all items |
 | `isEmpty()` | Check if container is empty |
 | `count()` | Count items (Countable) |
 | `toArray()` | Convert to array |
+| `getObject()` / `setObject()` | Get/set parent object |
+| `getFieldname()` / `setFieldname()` | Get/set field name |
+| `getDefinition()` / `setDefinition()` | Get/set block definition |
+| `isLazyLoad()` / `isLoaded()` | Check lazy loading state |
 
 ### ExtendedBlockItem
 
 | Method | Description |
 |--------|-------------|
-| `getId()` | Get database ID |
-| `getType()` | Get block type |
-| `getIndex()` | Get position index |
+| `getId()` / `setId()` | Get/set database ID |
+| `getType()` / `setType()` | Get/set block type |
+| `getIndex()` / `setIndex()` | Get/set position index |
 | `getFieldValue(string $name)` | Get field value |
 | `setFieldValue(string $name, $value)` | Set field value |
 | `hasFieldValue(string $name)` | Check if field exists |
+| `removeFieldValue(string $name)` | Remove a field value |
+| `getAllFieldValues()` | Get all field values as array |
 | `toArray()` | Convert to array |
-| `fromArray(array $data)` | Create from array |
+| `fromArray(array $data)` | Create from array (static) |
+| `isModified()` / `setModified()` | Check/set modified state |
+
+#### Localization Methods (per-item)
+
+| Method | Description |
+|--------|-------------|
+| `getLocalizedValue(string $language, string $name)` | Get localized field value |
+| `setLocalizedValue(string $language, string $name, $value)` | Set localized field value |
+| `getLocalizedValuesForLanguage(string $language)` | Get all values for a language |
+| `getLocalizedData()` / `setLocalizedData()` | Get/set all localized data |
+| `hasLocalizedData(string $language, ?string $name = null)` | Check if localized data exists |
+| `clearLocalizedData(string $language)` | Clear localized data for a language |
+
+> **Note:** Per-item localization methods store data in a separate localized table. This is different from Pimcore's LocalizedFields data type (which is NOT supported inside ExtendedBlock).
 
 ## 🧪 Testing
 

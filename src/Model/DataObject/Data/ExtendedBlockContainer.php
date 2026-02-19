@@ -15,6 +15,7 @@ namespace ExtendedBlockBundle\Model\DataObject\Data;
 use ArrayAccess;
 use Countable;
 use ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data\ExtendedBlock;
+use InvalidArgumentException;
 use Iterator;
 use Pimcore\Model\DataObject\Concrete;
 
@@ -42,10 +43,10 @@ use Pimcore\Model\DataObject\Concrete;
  * $count = count($container);
  * ```
  *
- * @implements \Iterator<int, ExtendedBlockItem>
- * @implements \ArrayAccess<int, ExtendedBlockItem>
+ * @implements Iterator<int, ExtendedBlockItem>
+ * @implements ArrayAccess<int, ExtendedBlockItem>
  */
-class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
+class ExtendedBlockContainer implements Iterator, Countable, ArrayAccess
 {
     /**
      * The parent object that owns this container.
@@ -329,7 +330,7 @@ class ExtendedBlockContainer implements \Iterator, \Countable, \ArrayAccess
         $this->ensureLoaded();
 
         if (!$value instanceof ExtendedBlockItem) {
-            throw new \InvalidArgumentException('Value must be an instance of ExtendedBlockItem');
+            throw new InvalidArgumentException('Value must be an instance of ExtendedBlockItem');
         }
 
         if (null === $offset) {

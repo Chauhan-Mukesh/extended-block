@@ -62,7 +62,7 @@ class ExtendedBlockBundle extends AbstractPimcoreBundle implements PimcoreBundle
     public function getDescription(): string
     {
         return 'Extended Block data type with separate table storage for Pimcore. '
-            .'Provides better performance and queryability compared to standard block type.';
+            . 'Provides better performance and queryability compared to standard block type.';
     }
 
     /**

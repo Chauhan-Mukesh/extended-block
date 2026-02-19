@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\Service;
 
+use InvalidArgumentException;
+
 /**
  * Utility class for validating and sanitizing SQL identifiers.
  *
@@ -65,22 +67,22 @@ class IdentifierValidator
      * @param string $identifier  The identifier to validate
      * @param string $description Description for error message (e.g., "table name", "column name")
      *
-     * @return string The validated identifier
+     * @throws InvalidArgumentException If the identifier is invalid
      *
-     * @throws \InvalidArgumentException If the identifier is invalid
+     * @return string The validated identifier
      */
     public static function validateIdentifier(string $identifier, string $description = 'identifier'): string
     {
         if (empty($identifier)) {
-            throw new \InvalidArgumentException(sprintf('Invalid %s: cannot be empty', $description));
+            throw new InvalidArgumentException(sprintf('Invalid %s: cannot be empty', $description));
         }
 
         if (strlen($identifier) > self::MAX_IDENTIFIER_LENGTH) {
-            throw new \InvalidArgumentException(sprintf('Invalid %s "%s": exceeds maximum length of %d characters', $description, $identifier, self::MAX_IDENTIFIER_LENGTH));
+            throw new InvalidArgumentException(sprintf('Invalid %s "%s": exceeds maximum length of %d characters', $description, $identifier, self::MAX_IDENTIFIER_LENGTH));
         }
 
         if (!preg_match(self::VALID_IDENTIFIER_PATTERN, $identifier)) {
-            throw new \InvalidArgumentException(sprintf('Invalid %s "%s": must contain only letters, numbers, and underscores, and start with a letter or underscore', $description, $identifier));
+            throw new InvalidArgumentException(sprintf('Invalid %s "%s": must contain only letters, numbers, and underscores, and start with a letter or underscore', $description, $identifier));
         }
 
         return $identifier;
@@ -91,9 +93,9 @@ class IdentifierValidator
      *
      * @param string $fieldName The field name to validate
      *
-     * @return string The validated field name
+     * @throws InvalidArgumentException If the field name is invalid
      *
-     * @throws \InvalidArgumentException If the field name is invalid
+     * @return string The validated field name
      */
     public static function validateFieldName(string $fieldName): string
     {
@@ -105,9 +107,9 @@ class IdentifierValidator
      *
      * @param string $classId The class ID to validate
      *
-     * @return string The validated class ID
+     * @throws InvalidArgumentException If the class ID is invalid
      *
-     * @throws \InvalidArgumentException If the class ID is invalid
+     * @return string The validated class ID
      */
     public static function validateClassId(string $classId): string
     {
@@ -119,9 +121,9 @@ class IdentifierValidator
      *
      * @param string $tableName The table name to validate
      *
-     * @return string The validated table name
+     * @throws InvalidArgumentException If the table name is invalid
      *
-     * @throws \InvalidArgumentException If the table name is invalid
+     * @return string The validated table name
      */
     public static function validateTableName(string $tableName): string
     {
@@ -133,9 +135,9 @@ class IdentifierValidator
      *
      * @param string $columnName The column name to validate
      *
-     * @return string The validated column name
+     * @throws InvalidArgumentException If the column name is invalid
      *
-     * @throws \InvalidArgumentException If the column name is invalid
+     * @return string The validated column name
      */
     public static function validateColumnName(string $columnName): string
     {
@@ -147,9 +149,9 @@ class IdentifierValidator
      *
      * @param string $typeName The block type name to validate
      *
-     * @return string The validated block type name
+     * @throws InvalidArgumentException If the type name is invalid
      *
-     * @throws \InvalidArgumentException If the type name is invalid
+     * @return string The validated block type name
      */
     public static function validateBlockTypeName(string $typeName): string
     {
@@ -161,9 +163,9 @@ class IdentifierValidator
      *
      * @param string $prefix The table prefix to validate
      *
-     * @return string The validated prefix
+     * @throws InvalidArgumentException If the prefix is invalid
      *
-     * @throws \InvalidArgumentException If the prefix is invalid
+     * @return string The validated prefix
      */
     public static function validateTablePrefix(string $prefix): string
     {
