@@ -807,9 +807,11 @@ foreach ($objectIds as $objectId) {
 <?php
 
 use Pimcore\Db;
+use Pimcore\Model\DataObject\Product;
 
 $db = Db::get();
-$tableName = 'object_eb_Product_contentBlocks';
+$classId = Product::classId();
+$tableName = 'object_eb_' . $classId . '_contentBlocks';
 
 // Count blocks by type
 $counts = $db->fetchAllAssociative(

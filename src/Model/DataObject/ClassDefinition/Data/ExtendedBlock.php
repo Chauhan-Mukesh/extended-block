@@ -12,9 +12,12 @@ declare(strict_types=1);
 
 namespace ExtendedBlockBundle\Model\DataObject\ClassDefinition\Data;
 
+use DateTimeInterface;
+use Exception;
 use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockContainer;
 use ExtendedBlockBundle\Model\DataObject\Data\ExtendedBlockItem;
 use ExtendedBlockBundle\Service\IdentifierValidator;
+use InvalidArgumentException;
 use Pimcore\Db;
 use Pimcore\Logger;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
@@ -33,6 +36,7 @@ use Pimcore\Model\DataObject\Fieldcollection\Data\AbstractData as Fieldcollectio
 use Pimcore\Model\DataObject\Localizedfield;
 use Pimcore\Model\DataObject\Objectbrick\Data\AbstractData as ObjectbrickAbstract;
 use Pimcore\Model\Element;
+use RuntimeException;
 
 /**
  * Extended Block Data Type Definition.
@@ -282,7 +286,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      */
     public function getPhpdocInputType(): ?string
     {
-        return '\\'.ExtendedBlockContainer::class.'|null';
+        return '\\' . ExtendedBlockContainer::class . '|null';
     }
 
     /**
@@ -292,7 +296,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      */
     public function getPhpdocReturnType(): ?string
     {
-        return '\\'.ExtendedBlockContainer::class.'|null';
+        return '\\' . ExtendedBlockContainer::class . '|null';
     }
 
     /**
@@ -445,8 +449,8 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                     $container->addItem($item);
                 }
             }
-        } catch (\Exception $e) {
-            Logger::error('ExtendedBlock: Error loading block data: '.$e->getMessage());
+        } catch (Exception $e) {
+            Logger::error('ExtendedBlock: Error loading block data: ' . $e->getMessage());
         }
 
         return $container;
@@ -527,9 +531,9 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
             }
 
             $db->commit();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $db->rollBack();
-            Logger::error('ExtendedBlock: Error saving block data: '.$e->getMessage());
+            Logger::error('ExtendedBlock: Error saving block data: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -579,7 +583,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         if ($this->getLazyLoading() && !$container->isLazyKeyLoaded($this->getName())) {
             $data = $this->load($container);
 
-            $setter = 'set'.ucfirst($this->getName());
+            $setter = 'set' . ucfirst($this->getName());
             if (method_exists($container, $setter)) {
                 $container->$setter($data);
             }
@@ -655,8 +659,8 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                 "DELETE FROM {$quotedTable} WHERE o_id = ? AND fieldname = ?",
                 [$object->getId(), $this->getName()]
             );
-        } catch (\Exception $e) {
-            Logger::error('ExtendedBlock: Error deleting block data: '.$e->getMessage());
+        } catch (Exception $e) {
+            Logger::error('ExtendedBlock: Error deleting block data: ' . $e->getMessage());
         }
     }
 
@@ -665,16 +669,16 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      *
      * @param string $classId The class ID
      *
-     * @return string The validated table name
+     * @throws InvalidArgumentException If classId is invalid
      *
-     * @throws \InvalidArgumentException If classId is invalid
+     * @return string The validated table name
      */
     public function getTableName(string $classId): string
     {
         // Validate classId before constructing the table name
         IdentifierValidator::validateClassId($classId);
 
-        $tableName = $this->tablePrefix.$classId.'_'.$this->getName();
+        $tableName = $this->tablePrefix . $classId . '_' . $this->getName();
 
         // Validate the full table name as well
         IdentifierValidator::validateTableName($tableName);
@@ -687,13 +691,13 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      *
      * @param string $classId The class ID
      *
-     * @return string The validated localized table name
+     * @throws InvalidArgumentException If classId is invalid
      *
-     * @throws \InvalidArgumentException If classId is invalid
+     * @return string The validated localized table name
      */
     public function getLocalizedTableName(string $classId): string
     {
-        $tableName = $this->getTableName($classId).'_localized';
+        $tableName = $this->getTableName($classId) . '_localized';
 
         // Validate the full localized table name
         IdentifierValidator::validateTableName($tableName);
@@ -716,45 +720,45 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      * - No AdvancedManyToManyObjectRelation inside ExtendedBlock
      * - No ReverseObjectRelation inside ExtendedBlock
      *
-     * @throws \Exception If validation fails
+     * @throws Exception If validation fails
      */
     public function validate(): void
     {
         // Check for nested ExtendedBlock in LocalizedFields
         if ($this->disallowAddingInLocalizedField) {
-            throw new \Exception('ExtendedBlock with localized fields cannot be added inside a LocalizedFields container. This would create an infinite recursion. Please restructure your class definition.');
+            throw new Exception('ExtendedBlock with localized fields cannot be added inside a LocalizedFields container. This would create an infinite recursion. Please restructure your class definition.');
         }
 
         // Validate children field definitions
         foreach ($this->children as $field) {
             // Check for nested ExtendedBlock
             if ($field instanceof self) {
-                throw new \Exception('ExtendedBlock cannot contain another ExtendedBlock.');
+                throw new Exception('ExtendedBlock cannot contain another ExtendedBlock.');
             }
 
             // Check for Block inside ExtendedBlock
             if ($field instanceof Block) {
-                throw new \Exception('ExtendedBlock cannot contain a Block. Block nesting is not supported to ensure data integrity and prevent performance issues.');
+                throw new Exception('ExtendedBlock cannot contain a Block. Block nesting is not supported to ensure data integrity and prevent performance issues.');
             }
 
             // Check for Fieldcollections inside ExtendedBlock
             if ($field instanceof Fieldcollections) {
-                throw new \Exception('ExtendedBlock cannot contain Fieldcollections. Fieldcollections are complex container types that cannot be nested inside ExtendedBlock.');
+                throw new Exception('ExtendedBlock cannot contain Fieldcollections. Fieldcollections are complex container types that cannot be nested inside ExtendedBlock.');
             }
 
             // Check for Objectbricks inside ExtendedBlock
             if ($field instanceof Objectbricks) {
-                throw new \Exception('ExtendedBlock cannot contain Objectbricks. Objectbricks are complex container types that cannot be nested inside ExtendedBlock.');
+                throw new Exception('ExtendedBlock cannot contain Objectbricks. Objectbricks are complex container types that cannot be nested inside ExtendedBlock.');
             }
 
             // Check for LocalizedFields inside ExtendedBlock
             if ($field instanceof Localizedfields) {
-                throw new \Exception('ExtendedBlock cannot contain LocalizedFields. Localized fields are not supported inside ExtendedBlock.');
+                throw new Exception('ExtendedBlock cannot contain LocalizedFields. Localized fields are not supported inside ExtendedBlock.');
             }
 
             // Check for Classificationstore inside ExtendedBlock
             if ($field instanceof Classificationstore) {
-                throw new \Exception('ExtendedBlock cannot contain Classificationstore. Classificationstore stores data in complex structures incompatible with ExtendedBlock\'s separate table storage.');
+                throw new Exception('ExtendedBlock cannot contain Classificationstore. Classificationstore stores data in complex structures incompatible with ExtendedBlock\'s separate table storage.');
             }
 
             // UNSAFE RELATIONAL TYPES - Must be explicitly blocked
@@ -763,17 +767,17 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
 
             // Check for AdvancedManyToManyRelation (has metadata per relation)
             if ($field instanceof AdvancedManyToManyRelation) {
-                throw new \Exception('ExtendedBlock cannot contain AdvancedManyToManyRelation. This field type stores additional metadata per relation in separate tables, which is incompatible with ExtendedBlock\'s storage model. Use ManyToManyRelation instead for simple relations.');
+                throw new Exception('ExtendedBlock cannot contain AdvancedManyToManyRelation. This field type stores additional metadata per relation in separate tables, which is incompatible with ExtendedBlock\'s storage model. Use ManyToManyRelation instead for simple relations.');
             }
 
             // Check for AdvancedManyToManyObjectRelation (has metadata per relation)
             if ($field instanceof AdvancedManyToManyObjectRelation) {
-                throw new \Exception('ExtendedBlock cannot contain AdvancedManyToManyObjectRelation. This field type stores additional metadata per relation in separate tables, which is incompatible with ExtendedBlock\'s storage model. Use ManyToManyObjectRelation instead for simple relations.');
+                throw new Exception('ExtendedBlock cannot contain AdvancedManyToManyObjectRelation. This field type stores additional metadata per relation in separate tables, which is incompatible with ExtendedBlock\'s storage model. Use ManyToManyObjectRelation instead for simple relations.');
             }
 
             // Check for ReverseObjectRelation (virtual field reading owner's relations)
             if ($field instanceof ReverseObjectRelation) {
-                throw new \Exception('ExtendedBlock cannot contain ReverseObjectRelation. This field type is a virtual/computed field that reads inverse relations from another object\'s forward relation, which cannot be stored independently. Consider using a different approach for bi-directional relation tracking.');
+                throw new Exception('ExtendedBlock cannot contain ReverseObjectRelation. This field type is a virtual/computed field that reads inverse relations from another object\'s forward relation, which cannot be stored independently. Consider using a different approach for bi-directional relation tracking.');
             }
         }
     }
@@ -861,118 +865,6 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
     }
 
     /**
-     * Gets field definitions suitable for grid display.
-     *
-     * Returns an array of field definitions with key and label for column headers.
-     * Filters to simple field types that can be displayed as text.
-     *
-     * Note: If a field's title is not defined, the field name is used as the
-     * label fallback. For best results, ensure all child fields have titles set.
-     *
-     * @return array<int, array{key: string, label: string}> Array of field definitions
-     */
-    private function getGridDisplayableFieldDefinitions(): array
-    {
-        $displayableTypes = [
-            'input',
-            'textarea',
-            'wysiwyg',
-            'numeric',
-            'checkbox',
-            'date',
-            'datetime',
-            'select',
-            'multiselect',
-            'country',
-            'countrymultiselect',
-            'language',
-            'languagemultiselect',
-            'email',
-            'gender',
-            'slider',
-            'booleanSelect',
-            // Relation types - display as path/key instead of IDs
-            'manyToOneRelation',
-            'manyToManyRelation',
-            'manyToManyObjectRelation',
-        ];
-
-        $fields = [];
-
-        foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
-            if (in_array($fieldDef->getFieldtype(), $displayableTypes, true)) {
-                $fields[] = [
-                    'key' => $fieldName,
-                    'label' => $fieldDef->getTitle() ?: $fieldName,
-                ];
-            }
-        }
-
-        return $fields;
-    }
-
-    /**
-     * Formats a value for grid preview display.
-     *
-     * Converts various value types to a short string suitable for grid display.
-     *
-     * @param mixed $value The value to format
-     *
-     * @return string The formatted string
-     */
-    private function formatValueForGridPreview(mixed $value): string
-    {
-        if (null === $value) {
-            return '';
-        }
-
-        if (is_bool($value)) {
-            return $value ? 'Yes' : 'No';
-        }
-
-        // Handle relation elements (ManyToOneRelation) - show path/key instead of ID
-        if ($value instanceof Element\ElementInterface) {
-            // Try to get the key/name for display
-            $key = method_exists($value, 'getKey') ? $value->getKey() : null;
-            if ($key) {
-                return $key;
-            }
-
-            // Fallback to path
-            return $value->getRealFullPath();
-        }
-
-        // Handle arrays (ManyToManyRelation) - convert element objects to keys
-        if (is_array($value)) {
-            $formattedValues = [];
-            foreach ($value as $item) {
-                if ($item instanceof Element\ElementInterface) {
-                    $key = method_exists($item, 'getKey') ? $item->getKey() : null;
-                    $formattedValues[] = $key ?: $item->getRealFullPath();
-                } else {
-                    $formattedValues[] = (string) $item;
-                }
-            }
-
-            return implode(', ', array_filter($formattedValues));
-        }
-
-        if ($value instanceof \DateTimeInterface) {
-            return $value->format('Y-m-d');
-        }
-
-        $stringValue = (string) $value;
-
-        // Truncate long strings
-        if (strlen($stringValue) > self::GRID_MAX_STRING_LENGTH) {
-            return substr($stringValue, 0, self::GRID_TRUNCATE_LENGTH).'...';
-        }
-
-        // Strip HTML tags for WYSIWYG content
-        return strip_tags($stringValue);
-    }
-
-    /**
      * Returns the data for CSV export.
      *
      * Exports block data in a format suitable for CSV files.
@@ -1020,40 +912,6 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         }
 
         return implode("\n", $lines);
-    }
-
-    /**
-     * Formats a value for CSV export.
-     *
-     * Converts various value types to a string suitable for CSV export.
-     *
-     * @param mixed $value The value to format
-     *
-     * @return string The formatted string
-     */
-    private function formatValueForCsvExport(mixed $value): string
-    {
-        if (null === $value) {
-            return '';
-        }
-
-        if (is_bool($value)) {
-            return $value ? '1' : '0';
-        }
-
-        if (is_array($value)) {
-            return implode(',', array_filter(array_map('strval', $value)));
-        }
-
-        if ($value instanceof \DateTimeInterface) {
-            return $value->format('Y-m-d H:i:s');
-        }
-
-        // Strip HTML tags and normalize whitespace
-        $stringValue = strip_tags((string) $value);
-        $stringValue = preg_replace('/\s+/', ' ', $stringValue) ?? $stringValue;
-
-        return trim($stringValue);
     }
 
     /**
@@ -1234,7 +1092,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      */
     public function getParameterTypeDeclaration(): ?string
     {
-        return '?\\'.ExtendedBlockContainer::class;
+        return '?\\' . ExtendedBlockContainer::class;
     }
 
     /**
@@ -1244,7 +1102,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      */
     public function getReturnTypeDeclaration(): ?string
     {
-        return '?\\'.ExtendedBlockContainer::class;
+        return '?\\' . ExtendedBlockContainer::class;
     }
 
     /**
@@ -1254,7 +1112,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
      */
     public function getPhpType(): ?string
     {
-        return '\\'.ExtendedBlockContainer::class.'|null';
+        return '\\' . ExtendedBlockContainer::class . '|null';
     }
 
     /**
@@ -1595,9 +1453,9 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                     $queryData = [];
                     $hasData = false;
                     foreach (array_keys($queryColumnTypes) as $colSuffix) {
-                        $colName = $fieldName.'__'.$colSuffix;
+                        $colName = $fieldName . '__' . $colSuffix;
                         if (isset($row[$colName])) {
-                            $queryData[$fieldName.'__'.$colSuffix] = $row[$colName];
+                            $queryData[$fieldName . '__' . $colSuffix] = $row[$colName];
                             if (null !== $row[$colName]) {
                                 $hasData = true;
                             }
@@ -1605,10 +1463,10 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                     }
 
                     // Only load the element if we have valid data
-                    if ($hasData && isset($queryData[$fieldName.'__id']) && isset($queryData[$fieldName.'__type'])) {
+                    if ($hasData && isset($queryData[$fieldName . '__id']) && isset($queryData[$fieldName . '__type'])) {
                         $element = Element\Service::getElementById(
-                            $queryData[$fieldName.'__type'],
-                            (int) $queryData[$fieldName.'__id']
+                            $queryData[$fieldName . '__type'],
+                            (int) $queryData[$fieldName . '__id']
                         );
                         $item->setFieldValue($fieldName, $element);
                     }
@@ -1685,8 +1543,8 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                     $item->setLocalizedData($localizedData[$itemId]);
                 }
             }
-        } catch (\Exception $e) {
-            Logger::error('ExtendedBlock: Error loading localized data: '.$e->getMessage());
+        } catch (Exception $e) {
+            Logger::error('ExtendedBlock: Error loading localized data: ' . $e->getMessage());
         }
     }
 
@@ -1900,7 +1758,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                 $queryColumnTypes = $fieldDef->getQueryColumnType();
                 if (is_array($queryColumnTypes)) {
                     foreach ($queryColumnTypes as $colSuffix => $colType) {
-                        $colName = $fieldName.'__'.$colSuffix;
+                        $colName = $fieldName . '__' . $colSuffix;
                         IdentifierValidator::validateColumnName($colName);
                         $quotedColumn = $db->quoteIdentifier($colName);
                         $columns[] = "{$quotedColumn} {$colType}";
@@ -1925,7 +1783,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         $columns[] = 'INDEX `fieldname` (`fieldname`)';
         $columns[] = 'INDEX `type` (`type`)';
 
-        $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $sql = "CREATE TABLE {$quotedTable} (\n" . implode(",\n", $columns) . "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         $db->executeStatement($sql);
     }
@@ -1969,7 +1827,7 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                 $queryColumnTypes = $fieldDef->getQueryColumnType();
                 if (is_array($queryColumnTypes)) {
                     foreach ($queryColumnTypes as $colSuffix => $colType) {
-                        $colName = $fieldName.'__'.$colSuffix;
+                        $colName = $fieldName . '__' . $colSuffix;
                         if (!isset($existingColumns[$colName])) {
                             IdentifierValidator::validateColumnName($colName);
                             $quotedColumn = $db->quoteIdentifier($colName);
@@ -1978,9 +1836,9 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                                 $sql = "ALTER TABLE {$quotedTable} ADD COLUMN {$quotedColumn} {$colType}";
                                 $db->executeStatement($sql);
                                 Logger::info("ExtendedBlock: Added missing column {$colName} to {$tableName}");
-                            } catch (\Exception $e) {
-                                Logger::error("ExtendedBlock: Failed to add column {$colName} to {$tableName}: ".$e->getMessage());
-                                throw new \RuntimeException("Failed to synchronize ExtendedBlock table schema for field '{$colName}'. The table '{$tableName}' may need manual migration. Error: ".$e->getMessage(), 0, $e);
+                            } catch (Exception $e) {
+                                Logger::error("ExtendedBlock: Failed to add column {$colName} to {$tableName}: " . $e->getMessage());
+                                throw new RuntimeException("Failed to synchronize ExtendedBlock table schema for field '{$colName}'. The table '{$tableName}' may need manual migration. Error: " . $e->getMessage(), 0, $e);
                             }
                         }
                     }
@@ -2001,9 +1859,9 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
                             $sql = "ALTER TABLE {$quotedTable} ADD COLUMN {$quotedColumn} {$columnType}";
                             $db->executeStatement($sql);
                             Logger::info("ExtendedBlock: Added missing column {$fieldName} to {$tableName}");
-                        } catch (\Exception $e) {
-                            Logger::error("ExtendedBlock: Failed to add column {$fieldName} to {$tableName}: ".$e->getMessage());
-                            throw new \RuntimeException("Failed to synchronize ExtendedBlock table schema for field '{$fieldName}'. The table '{$tableName}' may need manual migration. Error: ".$e->getMessage(), 0, $e);
+                        } catch (Exception $e) {
+                            Logger::error("ExtendedBlock: Failed to add column {$fieldName} to {$tableName}: " . $e->getMessage());
+                            throw new RuntimeException("Failed to synchronize ExtendedBlock table schema for field '{$fieldName}'. The table '{$tableName}' may need manual migration. Error: " . $e->getMessage(), 0, $e);
                         }
                     }
                 }
@@ -2053,8 +1911,154 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
         $columns[] = 'INDEX `language` (`language`)';
         $columns[] = 'UNIQUE KEY `ooo_id_language` (`ooo_id`, `language`)';
 
-        $sql = "CREATE TABLE {$quotedTable} (\n".implode(",\n", $columns)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        $sql = "CREATE TABLE {$quotedTable} (\n" . implode(",\n", $columns) . "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
         $db->executeStatement($sql);
+    }
+
+    /**
+     * Gets field definitions suitable for grid display.
+     *
+     * Returns an array of field definitions with key and label for column headers.
+     * Filters to simple field types that can be displayed as text.
+     *
+     * Note: If a field's title is not defined, the field name is used as the
+     * label fallback. For best results, ensure all child fields have titles set.
+     *
+     * @return array<int, array{key: string, label: string}> Array of field definitions
+     */
+    private function getGridDisplayableFieldDefinitions(): array
+    {
+        $displayableTypes = [
+            'input',
+            'textarea',
+            'wysiwyg',
+            'numeric',
+            'checkbox',
+            'date',
+            'datetime',
+            'select',
+            'multiselect',
+            'country',
+            'countrymultiselect',
+            'language',
+            'languagemultiselect',
+            'email',
+            'gender',
+            'slider',
+            'booleanSelect',
+            // Relation types - display as path/key instead of IDs
+            'manyToOneRelation',
+            'manyToManyRelation',
+            'manyToManyObjectRelation',
+        ];
+
+        $fields = [];
+
+        foreach ($this->getFieldDefinitions() as $fieldName => $fieldDef) {
+            if (in_array($fieldDef->getFieldtype(), $displayableTypes, true)) {
+                $fields[] = [
+                    'key' => $fieldName,
+                    'label' => $fieldDef->getTitle() ?: $fieldName,
+                ];
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Formats a value for grid preview display.
+     *
+     * Converts various value types to a short string suitable for grid display.
+     *
+     * @param mixed $value The value to format
+     *
+     * @return string The formatted string
+     */
+    private function formatValueForGridPreview(mixed $value): string
+    {
+        if (null === $value) {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'Yes' : 'No';
+        }
+
+        // Handle relation elements (ManyToOneRelation) - show path/key instead of ID
+        if ($value instanceof Element\ElementInterface) {
+            // Try to get the key/name for display
+            $key = method_exists($value, 'getKey') ? $value->getKey() : null;
+            if ($key) {
+                return $key;
+            }
+
+            // Fallback to path
+            return $value->getRealFullPath();
+        }
+
+        // Handle arrays (ManyToManyRelation) - convert element objects to keys
+        if (is_array($value)) {
+            $formattedValues = [];
+            foreach ($value as $item) {
+                if ($item instanceof Element\ElementInterface) {
+                    $key = method_exists($item, 'getKey') ? $item->getKey() : null;
+                    $formattedValues[] = $key ?: $item->getRealFullPath();
+                } else {
+                    $formattedValues[] = (string) $item;
+                }
+            }
+
+            return implode(', ', array_filter($formattedValues));
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        $stringValue = (string) $value;
+
+        // Truncate long strings
+        if (strlen($stringValue) > self::GRID_MAX_STRING_LENGTH) {
+            return substr($stringValue, 0, self::GRID_TRUNCATE_LENGTH) . '...';
+        }
+
+        // Strip HTML tags for WYSIWYG content
+        return strip_tags($stringValue);
+    }
+
+    /**
+     * Formats a value for CSV export.
+     *
+     * Converts various value types to a string suitable for CSV export.
+     *
+     * @param mixed $value The value to format
+     *
+     * @return string The formatted string
+     */
+    private function formatValueForCsvExport(mixed $value): string
+    {
+        if (null === $value) {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_array($value)) {
+            return implode(',', array_filter(array_map('strval', $value)));
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return $value->format('Y-m-d H:i:s');
+        }
+
+        // Strip HTML tags and normalize whitespace
+        $stringValue = strip_tags((string) $value);
+        $stringValue = preg_replace('/\s+/', ' ', $stringValue) ?? $stringValue;
+
+        return trim($stringValue);
     }
 }
