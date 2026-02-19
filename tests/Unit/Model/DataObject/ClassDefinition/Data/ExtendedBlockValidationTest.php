@@ -31,6 +31,11 @@ use PHPUnit\Framework\TestCase;
 class ExtendedBlockValidationTest extends TestCase
 {
     /**
+     * Path to the source directory from test directory.
+     */
+    private const SOURCE_DIR = __DIR__ . '/../../../../../../src';
+
+    /**
      * Tests that placement and nesting prevention rules are documented.
      *
      * This test ensures the validation rules are defined:
@@ -106,7 +111,7 @@ class ExtendedBlockValidationTest extends TestCase
      */
     public function testExtendedBlockContainsNestingPreventionLogic(): void
     {
-        $sourceFile = __DIR__ . '/../../../../../../src/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
+        $sourceFile = self::SOURCE_DIR . '/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
         $this->assertFileExists($sourceFile, 'ExtendedBlock.php should exist');
 
         $content = file_get_contents($sourceFile);
@@ -156,7 +161,7 @@ class ExtendedBlockValidationTest extends TestCase
      */
     public function testExtendedBlockBlocksAdvancedRelationalTypes(): void
     {
-        $sourceFile = __DIR__ . '/../../../../../../src/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
+        $sourceFile = self::SOURCE_DIR . '/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
         $this->assertFileExists($sourceFile, 'ExtendedBlock.php should exist');
 
         $content = file_get_contents($sourceFile);
@@ -193,7 +198,7 @@ class ExtendedBlockValidationTest extends TestCase
      */
     public function testExtendedBlockHasRelationalFieldSupportMatrix(): void
     {
-        $sourceFile = __DIR__ . '/../../../../../../src/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
+        $sourceFile = self::SOURCE_DIR . '/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
         $this->assertFileExists($sourceFile, 'ExtendedBlock.php should exist');
 
         $content = file_get_contents($sourceFile);
@@ -242,7 +247,7 @@ class ExtendedBlockValidationTest extends TestCase
      */
     public function testClassDefinitionListenerContainsPlacementValidation(): void
     {
-        $sourceFile = __DIR__ . '/../../../../../../src/EventListener/ClassDefinitionListener.php';
+        $sourceFile = self::SOURCE_DIR . '/EventListener/ClassDefinitionListener.php';
         $this->assertFileExists($sourceFile, 'ClassDefinitionListener.php should exist');
 
         $content = file_get_contents($sourceFile);
@@ -318,7 +323,7 @@ class ExtendedBlockValidationTest extends TestCase
      */
     public function testExtensionRegistersImplementationLoader(): void
     {
-        $sourceFile = __DIR__ . '/../../../../../../src/DependencyInjection/ExtendedBlockExtension.php';
+        $sourceFile = self::SOURCE_DIR . '/DependencyInjection/ExtendedBlockExtension.php';
         $this->assertFileExists($sourceFile, 'ExtendedBlockExtension.php should exist');
 
         $content = file_get_contents($sourceFile);
@@ -360,7 +365,7 @@ class ExtendedBlockValidationTest extends TestCase
      */
     public function testExtendedBlockUsesPlainColumnNamesForInsert(): void
     {
-        $sourceFile = __DIR__ . '/../../../../../../src/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
+        $sourceFile = self::SOURCE_DIR . '/Model/DataObject/ClassDefinition/Data/ExtendedBlock.php';
         $this->assertFileExists($sourceFile, 'ExtendedBlock.php should exist');
 
         $content = file_get_contents($sourceFile);
