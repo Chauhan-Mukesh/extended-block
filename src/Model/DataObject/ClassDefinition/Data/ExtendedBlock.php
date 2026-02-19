@@ -2049,27 +2049,24 @@ class ExtendedBlock extends Data implements Data\CustomResourcePersistingInterfa
     /**
      * Formats a Link value for grid preview display.
      *
-     * Returns the path of the linked element or the direct URL.
+     * Returns the resolved URL/path of the linked element including parameters and anchor.
+     * Uses getHref() which properly resolves internal links (documents, assets, objects)
+     * and direct URLs with query parameters.
      *
      * @param Link $link The link value to format
      *
-     * @return string The formatted path or URL
+     * @return string The formatted URL or path
      */
     private function formatLinkForGridPreview(Link $link): string
     {
-        // Get the resolved path from the link
-        $path = $link->getPath();
+        // Get the resolved href which includes the full URL with parameters and anchor
+        $href = $link->getHref();
 
-        if (!empty($path)) {
-            return $path;
+        if (!empty($href)) {
+            return $href;
         }
 
-        // Fallback to text or empty string
-        $text = $link->getText();
-        if (!empty($text)) {
-            return $text;
-        }
-
+        // Return empty string for links without a resolved path
         return '';
     }
 
