@@ -4,6 +4,8 @@ parameters:
         - src
     excludePaths:
         - src/Resources/public/*
+        # Studio UI components - interface only available when Studio UI Bundle is installed
+        - src/Webpack/*
     ignoreErrors:
         # Pimcore classes may not be available during static analysis
         -

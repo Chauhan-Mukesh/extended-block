@@ -1,0 +1,16 @@
+# Extended Block Bundle - Pimcore Studio UI Service Configuration
+#
+# This file is loaded only when Pimcore Studio UI Bundle is installed.
+#
+# @package    ExtendedBlockBundle
+# @author     Chauhan Mukesh
+# @copyright  Copyright (c) 2026 Chauhan Mukesh
+# @license    MIT License
+
+services:
+    # Pimcore Studio UI Webpack Entry Point Provider
+    # This service registers ExtendedBlock's JavaScript assets
+    # with Pimcore Studio UI's module federation system.
+    ExtendedBlockBundle\Webpack\WebpackEntryPointProvider:
+        tags:
+            - { name: pimcore_studio_ui.webpack_entry_point_provider }
